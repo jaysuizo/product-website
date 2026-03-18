@@ -1,0 +1,195 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Admin portal for uploading and editing products with media and inventory."
+    />
+    <title>Admin | LiveCatalog</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Space+Grotesk:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+    <script type="module" src="admin.js"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content">Skip to content</a>
+    <div class="bg-shape bg-shape-1" aria-hidden="true"></div>
+    <div class="bg-shape bg-shape-2" aria-hidden="true"></div>
+
+    <header class="site-header">
+      <a class="brand" href="index.html">LiveCatalog</a>
+      <nav aria-label="Main">
+        <a href="index.html">Viewer Page</a>
+        <a href="#product-form-card">Upload Product</a>
+        <a href="#inventory-log-card">Inventory Log</a>
+      </nav>
+    </header>
+
+    <main id="main-content" class="page-shell admin-page">
+      <section class="hero reveal compact-hero">
+        <p class="kicker">Admin Portal</p>
+        <h1>Upload, edit, and manage inventory in real time.</h1>
+      </section>
+
+      <section id="admin-login-section" class="panel reveal auth-card">
+        <div class="section-head">
+          <h2>Admin Login</h2>
+          <p>Sign in or create an admin account to manage inventory.</p>
+        </div>
+
+        <p id="admin-auth-status" class="status-pill">Checking login state...</p>
+
+        <form id="admin-login-form" class="inline-form" novalidate>
+          <label for="admin-email">Email</label>
+          <input id="admin-email" name="email" type="email" required />
+
+          <label for="admin-password">Password</label>
+          <input
+            id="admin-password"
+            name="password"
+            type="password"
+            minlength="6"
+            required
+          />
+
+          <button id="admin-signin" type="submit">Sign In</button>
+          <button type="button" id="admin-signup" class="ghost-btn">
+            Sign Up Admin
+          </button>
+          <button type="button" id="admin-logout" class="ghost-btn" hidden>
+            Log Out
+          </button>
+        </form>
+
+        <p id="admin-auth-error" class="message message-error" role="alert"></p>
+        <p id="admin-firebase-warning" class="message message-warning" hidden></p>
+      </section>
+
+      <section id="admin-panel" class="admin-panel" hidden>
+        <section id="product-form-card" class="panel reveal">
+          <div class="section-head">
+            <h2 id="product-form-title">Add Product</h2>
+            <p>
+              Add multiple photos and videos, then set size and stock details.
+            </p>
+          </div>
+
+          <form id="product-form" class="product-form" novalidate>
+            <label for="product-name">Product Name</label>
+            <input id="product-name" name="name" type="text" maxlength="120" required />
+
+            <label for="product-category">Category</label>
+            <select id="product-category" name="category" required>
+              <option value="fashion">Fashion</option>
+              <option value="beauty">Beauty</option>
+              <option value="gadgets">Gadgets</option>
+              <option value="home" selected>Home</option>
+              <option value="sports">Sports</option>
+            </select>
+
+            <label for="product-price">Price (PHP)</label>
+            <input
+              id="product-price"
+              name="price"
+              type="number"
+              min="0"
+              step="0.01"
+              placeholder="0.00"
+              required
+            />
+
+            <label class="checkbox-row" for="product-flash-sale">
+              <input
+                id="product-flash-sale"
+                name="flashSale"
+                type="checkbox"
+              />
+              <span>Include in flash sale section</span>
+            </label>
+
+            <label for="product-description">Description</label>
+            <textarea
+              id="product-description"
+              name="description"
+              rows="3"
+              maxlength="1200"
+              required
+            ></textarea>
+
+            <label for="product-media">Photos and Videos</label>
+            <input
+              id="product-media"
+              name="media"
+              type="file"
+              accept="image/*,video/*"
+              multiple
+            />
+
+            <p class="hint">
+              You can upload many images and videos. Total media per product is limited to 20 MB. Existing media can be removed while editing.
+            </p>
+
+            <div id="existing-media-wrap" class="media-admin" hidden>
+              <h3>Existing Media</h3>
+              <div id="existing-media-list" class="media-admin-list"></div>
+            </div>
+
+            <div class="size-header">
+              <h3>Sizes and Stock</h3>
+              <button type="button" id="add-size-row" class="ghost-btn">
+                Add Size
+              </button>
+            </div>
+
+            <div id="size-rows" class="size-rows"></div>
+
+            <div class="form-actions">
+              <button id="product-submit" type="submit">Save Product</button>
+              <button id="product-cancel" type="button" class="ghost-btn" hidden>
+                Cancel Edit
+              </button>
+            </div>
+          </form>
+
+          <p id="product-form-message" class="message" role="status"></p>
+        </section>
+
+        <section class="panel reveal">
+          <div class="section-head">
+            <h2>Manage Products</h2>
+            <p>Edit, delete, and review uploaded items.</p>
+          </div>
+
+          <p id="admin-product-loading" class="message">Loading products...</p>
+          <div id="admin-product-list" class="product-grid"></div>
+          <p id="admin-product-empty" class="message" hidden>
+            No products yet. Add your first product above.
+          </p>
+        </section>
+
+        <section id="inventory-log-card" class="panel reveal">
+          <div class="section-head">
+            <h2>Inventory Log</h2>
+            <p>Recent stock and product actions by admin users.</p>
+          </div>
+
+          <ul id="inventory-log-list" class="log-list"></ul>
+          <p id="inventory-log-empty" class="message" hidden>
+            No inventory logs yet.
+          </p>
+        </section>
+      </section>
+    </main>
+
+    <footer class="site-footer page-shell">
+      <p><span id="admin-year"></span> LiveCatalog Admin Portal.</p>
+    </footer>
+  </body>
+</html>
+

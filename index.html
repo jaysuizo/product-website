@@ -1,0 +1,115 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Shopee-style storefront home powered by Firebase." />
+    <title>Shopee Hub | Home</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;700;800&family=Plus+Jakarta+Sans:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="viewer.css" />
+    <script type="module" src="viewer.js"></script>
+  </head>
+  <body data-page="home">
+    <a class="skip-link" href="#main-content">Skip to content</a>
+
+    <header class="topbar">
+      <div class="topbar-inner">
+        <a class="brand" href="/">Shopee Hub</a>
+
+        <div class="search-wrap">
+          <input
+            id="search-input"
+            type="search"
+            placeholder="Search products, categories, sizes"
+            aria-label="Search products"
+          />
+        </div>
+
+        <nav aria-label="Primary">
+          <a href="/">Home</a>
+          <a href="/flash-deals">Flash Deals</a>
+          <a href="/products">Products</a>
+          <a href="/cart">Cart (<span id="nav-cart-count">0</span>)</a>
+          <a href="/account">Account</a>
+          <a href="/admin">Admin</a>
+        </nav>
+      </div>
+    </header>
+
+    <main id="main-content" class="page-shell page-grid">
+      <section class="main-col">
+        <section class="panel hero-panel">
+          <p class="panel-kicker">Marketplace Home</p>
+          <h1>Shopee-inspired storefront with live Firebase inventory.</h1>
+          <p>
+            Admin uploads products once and all pages update in real time,
+            including flash deals, category lists, and cart-ready cards.
+          </p>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head">
+            <h2>Flash Deals</h2>
+            <div class="countdown" aria-live="polite">
+              <span class="count-box"><strong id="count-hours">00</strong><small>Hours</small></span>
+              <span class="count-box"><strong id="count-minutes">00</strong><small>Minutes</small></span>
+              <span class="count-box"><strong id="count-seconds">00</strong><small>Seconds</small></span>
+            </div>
+          </div>
+
+          <p id="firebase-warning" class="message message-warning" hidden></p>
+          <p id="product-loading" class="message">Loading products...</p>
+
+          <div id="flash-product-list" class="product-grid compact"></div>
+          <p id="flash-empty" class="message" hidden>No flash products yet.</p>
+          <a class="inline-link" href="/flash-deals">View full flash deals</a>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head">
+            <h2>Featured Products</h2>
+            <p><span id="product-count">0</span> items</p>
+          </div>
+          <div id="product-list" class="product-grid" data-limit="8"></div>
+          <p id="product-empty" class="message" hidden>No products available.</p>
+          <a class="inline-link" href="/products">Open all products</a>
+        </section>
+      </section>
+
+      <aside class="side-col">
+        <section class="panel cart-panel">
+          <div class="panel-head">
+            <h3>Your Cart</h3>
+            <p><span id="cart-count">0</span> items</p>
+          </div>
+          <div id="cart-list" class="cart-list"></div>
+          <p id="cart-empty" class="message">Cart is empty. Add products below.</p>
+
+          <div class="cart-summary">
+            <p><span>Subtotal</span><strong id="cart-subtotal">PHP 0.00</strong></p>
+            <p><span>Savings</span><strong id="cart-savings">PHP 0.00</strong></p>
+            <p class="total"><span>Total</span><strong id="cart-total">PHP 0.00</strong></p>
+          </div>
+
+          <a class="cta-link" href="/cart">Go To Cart</a>
+        </section>
+
+        <section class="panel">
+          <h3>Order Summary</h3>
+          <p class="summary-line"><span>Items</span><strong id="summary-items">0</strong></p>
+          <p class="summary-line"><span>Total</span><strong id="summary-total">PHP 0.00</strong></p>
+          <a class="cta-link secondary" href="/account">Continue to account</a>
+        </section>
+      </aside>
+    </main>
+
+    <footer class="site-footer page-shell">
+      <p><span id="year"></span> Shopee-style showcase website. Not affiliated with Shopee.</p>
+    </footer>
+  </body>
+</html>

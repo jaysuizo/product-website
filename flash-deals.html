@@ -1,0 +1,60 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Shopee-style flash deals page." />
+    <title>Shopee Hub | Flash Deals</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;700;800&family=Plus+Jakarta+Sans:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="viewer.css" />
+    <script type="module" src="viewer.js"></script>
+  </head>
+  <body data-page="flash">
+    <a class="skip-link" href="#main-content">Skip to content</a>
+
+    <header class="topbar">
+      <div class="topbar-inner">
+        <a class="brand" href="/">Shopee Hub</a>
+        <div class="search-wrap">
+          <input id="search-input" type="search" placeholder="Search flash products" aria-label="Search products" />
+        </div>
+        <nav aria-label="Primary">
+          <a href="/">Home</a>
+          <a href="/flash-deals">Flash Deals</a>
+          <a href="/products">Products</a>
+          <a href="/cart">Cart (<span id="nav-cart-count">0</span>)</a>
+          <a href="/account">Account</a>
+          <a href="/admin">Admin</a>
+        </nav>
+      </div>
+    </header>
+
+    <main id="main-content" class="page-shell single-col">
+      <section class="panel">
+        <div class="panel-head">
+          <h1>Flash Deals</h1>
+          <div class="countdown" aria-live="polite">
+            <span class="count-box"><strong id="count-hours">00</strong><small>Hours</small></span>
+            <span class="count-box"><strong id="count-minutes">00</strong><small>Minutes</small></span>
+            <span class="count-box"><strong id="count-seconds">00</strong><small>Seconds</small></span>
+          </div>
+        </div>
+
+        <p id="firebase-warning" class="message message-warning" hidden></p>
+        <p id="product-loading" class="message">Loading flash products...</p>
+
+        <div id="flash-product-list" class="product-grid"></div>
+        <p id="flash-empty" class="message" hidden>No flash products yet.</p>
+      </section>
+    </main>
+
+    <footer class="site-footer page-shell">
+      <p><span id="year"></span> Shopee-style showcase website. Not affiliated with Shopee.</p>
+    </footer>
+  </body>
+</html>
