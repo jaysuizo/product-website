@@ -7,34 +7,41 @@
       name="description"
       content="Admin portal for uploading and editing products with media and inventory."
     />
-    <title>Admin | LiveCatalog</title>
+    <title>Shopee Hub | Admin</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Space+Grotesk:wght@400;500;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;700;800&family=Plus+Jakarta+Sans:wght@400;500;700&display=swap"
       rel="stylesheet"
     />
     <link rel="stylesheet" href="styles.css" />
     <script type="module" src="admin.js"></script>
   </head>
-  <body>
+  <body class="sky-theme">
     <a class="skip-link" href="#main-content">Skip to content</a>
-    <div class="bg-shape bg-shape-1" aria-hidden="true"></div>
-    <div class="bg-shape bg-shape-2" aria-hidden="true"></div>
 
-    <header class="site-header">
-      <a class="brand" href="index.html">LiveCatalog</a>
-      <nav aria-label="Main">
-        <a href="index.html">Viewer Page</a>
-        <a href="#product-form-card">Upload Product</a>
-        <a href="#inventory-log-card">Inventory Log</a>
-      </nav>
+    <header class="topbar">
+      <div class="topbar-inner">
+        <a class="brand" href="/">Shopee Hub</a>
+        <div class="search-wrap" aria-hidden="true">
+          <input type="text" value="Admin Portal" readonly />
+        </div>
+        <nav aria-label="Main">
+          <a href="/">Viewer Page</a>
+          <a href="#product-form-card">Upload Product</a>
+          <a href="#inventory-log-card">Inventory Log</a>
+          <a href="/products">Products</a>
+        </nav>
+      </div>
     </header>
 
     <main id="main-content" class="page-shell admin-page">
-      <section class="hero reveal compact-hero">
+      <section class="hero panel reveal compact-hero">
         <p class="kicker">Admin Portal</p>
         <h1>Upload, edit, and manage inventory in real time.</h1>
+        <p class="lead">
+          Same live system as storefront pages. Product updates sync to viewer pages instantly.
+        </p>
       </section>
 
       <section id="admin-login-section" class="panel reveal auth-card">
@@ -188,8 +195,7 @@
     </main>
 
     <footer class="site-footer page-shell">
-      <p><span id="admin-year"></span> LiveCatalog Admin Portal.</p>
+      <p><span id="admin-year"></span> Shopee-style admin portal.</p>
     </footer>
   </body>
 </html>
-

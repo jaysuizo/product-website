@@ -14,7 +14,7 @@
     <link rel="stylesheet" href="viewer.css" />
     <script type="module" src="viewer.js"></script>
   </head>
-  <body data-page="home">
+  <body data-page="home" class="sky-theme">
     <a class="skip-link" href="#main-content">Skip to content</a>
 
     <header class="topbar">
@@ -41,54 +41,139 @@
       </div>
     </header>
 
-    <main id="main-content" class="page-shell page-grid">
-      <section class="main-col">
-        <section class="panel hero-panel">
-          <p class="panel-kicker">Marketplace Home</p>
-          <h1>Shopee-inspired storefront with live Firebase inventory.</h1>
-          <p>
-            Admin uploads products once and all pages update in real time,
-            including flash deals, category lists, and cart-ready cards.
-          </p>
-        </section>
+    <main id="main-content" class="page-shell collage-home">
+      <p id="firebase-warning" class="message message-warning" hidden></p>
+      <p id="product-loading" class="message" hidden>Loading products...</p>
 
-        <section class="panel">
-          <div class="panel-head">
-            <h2>Flash Deals</h2>
-            <div class="countdown" aria-live="polite">
-              <span class="count-box"><strong id="count-hours">00</strong><small>Hours</small></span>
-              <span class="count-box"><strong id="count-minutes">00</strong><small>Minutes</small></span>
-              <span class="count-box"><strong id="count-seconds">00</strong><small>Seconds</small></span>
+      <section class="collage-left">
+        <section class="panel showcase-panel">
+          <div class="showcase-shell">
+            <aside class="showcase-menu" aria-label="Quick categories">
+              <h2>Account</h2>
+              <button type="button" class="menu-chip is-active">Mobiles & Gadgets</button>
+              <button type="button" class="menu-chip">Photo Appliances</button>
+              <button type="button" class="menu-chip">Home Appliances</button>
+              <button type="button" class="menu-chip">Toys & Games</button>
+              <button type="button" class="menu-chip">Computers</button>
+              <button type="button" class="menu-chip">Favorites</button>
+            </aside>
+
+            <div class="showcase-content">
+              <div class="panel-head">
+                <h1>Mobiles &amp; Gadgets</h1>
+                <p><span id="product-count">0</span> live items</p>
+              </div>
+
+              <div id="category-tabs" class="category-tabs" role="tablist" aria-label="Category filters"></div>
+
+              <div class="panel-head panel-head-compact">
+                <p>Sort Filter:</p>
+                <p>Sort by: Popular</p>
+              </div>
+
+              <div id="product-list" class="product-grid compact lite-cards" data-limit="4"></div>
+              <p id="product-empty" class="message" hidden>No products available.</p>
+
+              <div class="panel-head panel-head-subtitle">
+                <h3>Related Products</h3>
+                <a class="inline-link" href="/products">View all</a>
+              </div>
+              <div id="related-product-list" class="product-grid compact lite-cards" data-limit="3"></div>
             </div>
           </div>
-
-          <p id="firebase-warning" class="message message-warning" hidden></p>
-          <p id="product-loading" class="message">Loading products...</p>
-
-          <div id="flash-product-list" class="product-grid compact"></div>
-          <p id="flash-empty" class="message" hidden>No flash products yet.</p>
-          <a class="inline-link" href="/flash-deals">View full flash deals</a>
         </section>
 
-        <section class="panel">
-          <div class="panel-head">
-            <h2>Featured Products</h2>
-            <p><span id="product-count">0</span> items</p>
-          </div>
-          <div id="product-list" class="product-grid" data-limit="8"></div>
-          <p id="product-empty" class="message" hidden>No products available.</p>
-          <a class="inline-link" href="/products">Open all products</a>
+        <section class="collage-row collage-three">
+          <section class="panel mini-phone-panel">
+            <div class="phone-shell">
+              <h3>Daily Deals</h3>
+              <div id="mini-deals-list" class="product-grid compact tiny-cards" data-limit="4"></div>
+            </div>
+          </section>
+
+          <section class="panel category-stack-panel">
+            <div class="panel-head">
+              <h3>Categories</h3>
+              <p>Top picks</p>
+            </div>
+            <div id="category-product-list" class="product-grid compact tiny-cards" data-limit="4"></div>
+            <div class="panel-head panel-head-subtitle">
+              <h4>Popular Products</h4>
+              <a class="inline-link" href="/products">See all</a>
+            </div>
+            <div id="popular-mini-list" class="product-grid compact tiny-cards" data-limit="2"></div>
+          </section>
+
+          <section class="panel filter-panel">
+            <div class="panel-head">
+              <h3>Filter</h3>
+              <p>Smart view</p>
+            </div>
+            <ul class="filter-lines" aria-hidden="true">
+              <li><span class="dot"></span> Door Fees</li>
+              <li><span class="dot"></span> Account</li>
+              <li><span class="dot"></span> Free Shipping</li>
+              <li><span class="dot"></span> Payment Method</li>
+            </ul>
+            <div class="pay-preview">
+              <p>Total</p>
+              <strong id="summary-total">PHP 0.00</strong>
+            </div>
+            <a class="cta-link" href="/cart">Pay now</a>
+            <p class="summary-inline">Items: <strong id="summary-items">0</strong></p>
+          </section>
+        </section>
+
+        <section class="collage-row collage-two">
+          <section class="panel deals-panel">
+            <div class="panel-head">
+              <h3>Daily Deals</h3>
+              <div class="countdown" aria-live="polite">
+                <span class="count-box"><strong id="count-hours">00</strong><small>Hrs</small></span>
+                <span class="count-box"><strong id="count-minutes">00</strong><small>Min</small></span>
+                <span class="count-box"><strong id="count-seconds">00</strong><small>Sec</small></span>
+              </div>
+            </div>
+            <div id="flash-product-list" class="product-grid compact lite-cards" data-limit="4"></div>
+            <p id="flash-empty" class="message" hidden>No flash products yet.</p>
+            <a class="inline-link" href="/flash-deals">Open flash deals</a>
+          </section>
+
+          <section class="panel popular-panel">
+            <div class="panel-head">
+              <h3>Popular Products</h3>
+              <a class="inline-link" href="/products">View more</a>
+            </div>
+            <div id="popular-product-list" class="product-grid compact lite-cards" data-limit="4"></div>
+          </section>
         </section>
       </section>
 
-      <aside class="side-col">
-        <section class="panel cart-panel">
+      <aside class="collage-right">
+        <section class="panel phone-filter-panel">
+          <div class="phone-shell">
+            <div class="panel-head">
+              <h3>Filter</h3>
+              <p>Sort by: Best</p>
+            </div>
+            <div class="category-pill">All</div>
+            <div class="category-pill">Mobile Phones</div>
+            <div class="category-pill">Smartwatches</div>
+            <div class="pay-preview">
+              <p>Total amount</p>
+              <strong id="phone-total-amount">PHP 0.00</strong>
+            </div>
+            <a class="cta-link" href="/products">Pay now</a>
+          </div>
+        </section>
+
+        <section class="panel checkout-panel">
           <div class="panel-head">
-            <h3>Your Cart</h3>
+            <h3>Checkout</h3>
             <p><span id="cart-count">0</span> items</p>
           </div>
           <div id="cart-list" class="cart-list"></div>
-          <p id="cart-empty" class="message">Cart is empty. Add products below.</p>
+          <p id="cart-empty" class="message">Cart is empty. Add products.</p>
 
           <div class="cart-summary">
             <p><span>Subtotal</span><strong id="cart-subtotal">PHP 0.00</strong></p>
@@ -96,14 +181,16 @@
             <p class="total"><span>Total</span><strong id="cart-total">PHP 0.00</strong></p>
           </div>
 
-          <a class="cta-link" href="/cart">Go To Cart</a>
+          <a class="cta-link" href="/cart">Pay <span id="checkout-total">PHP 0.00</span></a>
         </section>
 
-        <section class="panel">
-          <h3>Order Summary</h3>
-          <p class="summary-line"><span>Items</span><strong id="summary-items">0</strong></p>
-          <p class="summary-line"><span>Total</span><strong id="summary-total">PHP 0.00</strong></p>
-          <a class="cta-link secondary" href="/account">Continue to account</a>
+        <section class="panel account-card">
+          <h3>Account + Admin</h3>
+          <p class="account-copy">Viewers browse instantly. Admin logs in to upload products and inventory.</p>
+          <div class="dual-links">
+            <a class="cta-link secondary" href="/account">Client screen</a>
+            <a class="cta-link" href="/admin">Admin login</a>
+          </div>
         </section>
       </aside>
     </main>

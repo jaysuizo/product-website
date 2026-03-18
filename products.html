@@ -14,7 +14,7 @@
     <link rel="stylesheet" href="viewer.css" />
     <script type="module" src="viewer.js"></script>
   </head>
-  <body data-page="products">
+  <body data-page="products" class="sky-theme">
     <a class="skip-link" href="#main-content">Skip to content</a>
 
     <header class="topbar">
@@ -34,21 +34,38 @@
       </div>
     </header>
 
-    <main id="main-content" class="page-shell single-col">
-      <section class="panel">
-        <div class="panel-head">
-          <h1>All Products</h1>
-          <p><span id="product-count">0</span> items</p>
-        </div>
+    <main id="main-content" class="page-shell page-grid">
+      <section class="main-col">
+        <section class="panel hero-panel compact">
+          <p class="panel-kicker">Collection</p>
+          <h1>Browse all categories</h1>
+          <p>Tap any product to open a focused detail view with all photos, videos, sizes, and live stock.</p>
+        </section>
 
-        <div id="category-tabs" class="category-tabs" role="tablist" aria-label="Category filters"></div>
+        <section class="panel">
+          <div class="panel-head">
+            <h2>All Products</h2>
+            <p><span id="product-count">0</span> items</p>
+          </div>
 
-        <p id="firebase-warning" class="message message-warning" hidden></p>
-        <p id="product-loading" class="message">Loading products...</p>
+          <div id="category-tabs" class="category-tabs" role="tablist" aria-label="Category filters"></div>
 
-        <div id="product-list" class="product-grid"></div>
-        <p id="product-empty" class="message" hidden>No products match your filters.</p>
+          <p id="firebase-warning" class="message message-warning" hidden></p>
+          <p id="product-loading" class="message">Loading products...</p>
+
+          <div id="product-list" class="product-grid"></div>
+          <p id="product-empty" class="message" hidden>No products match your filters.</p>
+        </section>
       </section>
+
+      <aside class="side-col">
+        <section class="panel summary-card">
+          <h3>Quick Cart</h3>
+          <p class="summary-line"><span>Items</span><strong id="summary-items">0</strong></p>
+          <p class="summary-line"><span>Total</span><strong id="summary-total">PHP 0.00</strong></p>
+          <a class="cta-link" href="/cart">Go to cart</a>
+        </section>
+      </aside>
     </main>
 
     <footer class="site-footer page-shell">

@@ -27,6 +27,11 @@ const productLoading = document.querySelector("#product-loading");
 const flashProductList = document.querySelector("#flash-product-list");
 const flashEmpty = document.querySelector("#flash-empty");
 const showFlashDealsBtn = document.querySelector("#show-flash-deals");
+const relatedProductList = document.querySelector("#related-product-list");
+const miniDealsList = document.querySelector("#mini-deals-list");
+const categoryProductList = document.querySelector("#category-product-list");
+const popularMiniList = document.querySelector("#popular-mini-list");
+const popularProductList = document.querySelector("#popular-product-list");
 
 const cartList = document.querySelector("#cart-list");
 const cartEmpty = document.querySelector("#cart-empty");
@@ -38,6 +43,8 @@ const cartSavings = document.querySelector("#cart-savings");
 const cartTotal = document.querySelector("#cart-total");
 const summaryItems = document.querySelector("#summary-items");
 const summaryTotal = document.querySelector("#summary-total");
+const checkoutTotal = document.querySelector("#checkout-total");
+const phoneTotalAmount = document.querySelector("#phone-total-amount");
 
 const countHours = document.querySelector("#count-hours");
 const countMinutes = document.querySelector("#count-minutes");
@@ -168,6 +175,7 @@ function renderCatalogProducts() {
 
   if (productsToRender.length === 0) {
     productList.replaceChildren();
+    renderSupplementalCollections(allProducts);
     if (productEmpty) {
       productEmpty.hidden = false;
     }
@@ -180,10 +188,12 @@ function renderCatalogProducts() {
 
   const cards = productsToRender.map((product) => createProductCard(product, false));
   productList.replaceChildren(...cards);
+  renderSupplementalCollections(results);
 }
 
 function renderFlashProducts() {
   if (!flashProductList) {
+    renderSupplementalFlashCollections(allProducts);
     return;
   }
 
@@ -192,7 +202,10 @@ function renderFlashProducts() {
 
   const fallback = allProducts.slice(0, 6);
   const source = flashProducts.length > 0 ? flashProducts : fallback;
-  const cards = source.slice(0, 8).map((product) => createProductCard(product, true));
+  const limit = Number.parseInt(String(flashProductList.dataset.limit || "8"), 10);
+  const chosen = Number.isFinite(limit) && limit > 0 ? source.slice(0, limit) : source;
+  const cards = chosen.map((product) => createProductCard(product, true));
+  renderSupplementalFlashCollections(source);
 
   if (cards.length === 0) {
     flashProductList.replaceChildren();
@@ -207,6 +220,44 @@ function renderFlashProducts() {
   }
 
   flashProductList.replaceChildren(...cards);
+}
+
+function renderSupplementalCollections(sourceProducts) {
+  const source = Array.isArray(sourceProducts) ? sourceProducts : [];
+  const categorySorted = [...source].sort((a, b) => {
+    const stockA = calculateTotalStock(a?.sizes || []);
+    const stockB = calculateTotalStock(b?.sizes || []);
+    return stockB - stockA;
+  });
+
+  renderProductCollection(relatedProductList, source.slice(4, 7), true);
+  renderProductCollection(categoryProductList, categorySorted.slice(0, 4), true);
+  renderProductCollection(popularMiniList, source.slice(0, 2), true);
+  renderProductCollection(popularProductList, source.slice(0, 4), true);
+}
+
+function renderSupplementalFlashCollections(sourceProducts) {
+  const source = Array.isArray(sourceProducts) ? sourceProducts : [];
+  renderProductCollection(miniDealsList, source.slice(0, 4), true);
+}
+
+function renderProductCollection(container, items, compact) {
+  if (!container) {
+    return;
+  }
+
+  const fallback = allProducts.slice(0, Number(container.dataset.limit || 4));
+  const source = items.length > 0 ? items : fallback;
+  const limit = Number.parseInt(String(container.dataset.limit || "0"), 10);
+  const chosen = Number.isFinite(limit) && limit > 0 ? source.slice(0, limit) : source;
+
+  if (chosen.length === 0) {
+    container.replaceChildren();
+    return;
+  }
+
+  const cards = chosen.map((product) => createProductCard(product, compact));
+  container.replaceChildren(...cards);
 }
 
 function getFilteredProducts(keyword) {
@@ -242,6 +293,9 @@ function getFilteredProducts(keyword) {
 function createProductCard(product, compact) {
   const card = document.createElement("article");
   card.className = "product-card";
+  if (compact) {
+    card.classList.add("is-compact");
+  }
   card.tabIndex = 0;
   card.setAttribute("role", "button");
   card.setAttribute("aria-label", `Open ${product.name || "product"} details`);
@@ -574,6 +628,12 @@ function updateCartTotals(items, subtotal, savings) {
   }
   if (summaryTotal) {
     summaryTotal.textContent = subtotalText;
+  }
+  if (checkoutTotal) {
+    checkoutTotal.textContent = subtotalText;
+  }
+  if (phoneTotalAmount) {
+    phoneTotalAmount.textContent = subtotalText;
   }
 }
 
