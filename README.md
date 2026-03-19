@@ -1,44 +1,32 @@
-<<<<<<< HEAD
-# product-website
-website
-=======
-﻿# LiveCatalog (Firebase)
+﻿# Product Website (Firebase)
 
-This project now includes a multi-screen Shopee-style storefront.
+This is a multi-page Shopee-style storefront with an admin panel.
 
-## Storefront Screens
+## Pages
 
-- `index.html`: Home screen
-- `flash-deals.html`: Flash deals screen
-- `products.html`: Full product listing screen
-- `cart.html`: Cart screen
-- `account.html`: Account/login-style screen
+- `index.html` - Home
+- `flash-deals.html` - Flash deals
+- `products.html` - Product listing
+- `cart.html` - Cart
+- `account.html` - Client account screen (visual)
+- `admin.html` - Admin login + product/inventory management
 
-## Admin Screen
+## Core Files
 
-- `admin.html`: Admin sign up/login + product management
-
-## Data And Logic Files
-
-- `viewer.css`: Shared storefront styling across all screens
-- `viewer.js`: Shared storefront logic for products, flash section, filters, and cart
-- `styles.css`: Admin page styling
-- `admin.js`: Admin CRUD + media upload + inventory logs
-- `firebase-config.js`: Firebase web config
-- `firebase-client.js`: Shared Firebase initialization
-- `firestore.rules`: Firestore security rules
-- `storage.rules`: Storage security rules
-- `vercel.json`: Route mapping for Vercel clean URLs
+- `viewer.js`, `viewer.css` - Storefront logic and styling
+- `admin.js`, `styles.css` - Admin logic and styling
+- `firebase-config.js`, `firebase-client.js` - Firebase setup
+- `firestore.rules`, `storage.rules` - Security rules
 
 ## Firebase Setup
 
-1. Enable Auth Email/Password.
-2. Enable Firestore.
+1. Enable Authentication (Email/Password).
+2. Enable Firestore Database.
 3. Enable Storage.
-4. Fill `firebase-config.js` values.
+4. Fill `firebase-config.js` with your Web app config.
 5. Publish `firestore.rules` and `storage.rules`.
 
-## Local Run
+## Run Locally
 
 ```powershell
 python -m http.server 5500
@@ -46,21 +34,30 @@ python -m http.server 5500
 
 Open:
 
-- Home: `http://localhost:5500/`
-- Flash: `http://localhost:5500/flash-deals.html`
-- Products: `http://localhost:5500/products.html`
-- Cart: `http://localhost:5500/cart.html`
-- Account: `http://localhost:5500/account.html`
-- Admin: `http://localhost:5500/admin.html`
+- `http://localhost:5500/index.html`
+- `http://localhost:5500/flash-deals.html`
+- `http://localhost:5500/products.html`
+- `http://localhost:5500/cart.html`
+- `http://localhost:5500/account.html`
+- `http://localhost:5500/admin.html`
 
-## Vercel Routes
+## Deploy To GitHub Pages
 
-After deploy, open:
+1. Push your code to GitHub repository `main` branch.
+2. In GitHub repo: `Settings` -> `Pages`.
+3. Under `Build and deployment`:
+   - Source: `Deploy from a branch`
+   - Branch: `main`
+   - Folder: `/ (root)`
+4. Save and wait for the published URL.
 
-- `/`
-- `/flash-deals`
-- `/products`
-- `/cart`
-- `/account`
-- `/admin`
->>>>>>> b59c43d (djsd)
+If your repo is `product-website` under user `jaysuizo`, the site URL is typically:
+
+- `https://jaysuizo.github.io/product-website/`
+
+## Important For Firebase Auth On GitHub Pages
+
+In Firebase Console -> Authentication -> Settings -> Authorized domains,
+add your GitHub Pages domain:
+
+- `jaysuizo.github.io`
