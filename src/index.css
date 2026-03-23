@@ -1,0 +1,47 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  @apply m-0 min-h-screen bg-slate-100 font-[Manrope] text-slate-800 antialiased;
+  background-image:
+    radial-gradient(circle at 8% 4%, rgba(255, 255, 255, 0.95) 0, transparent 28%),
+    radial-gradient(circle at 92% 2%, rgba(173, 204, 255, 0.6) 0, transparent 28%),
+    linear-gradient(180deg, #eff5ff 0%, #dbe8ff 42%, #e8f0ff 100%);
+}
+
+#root {
+  min-height: 100vh;
+}
+
+::selection {
+  @apply bg-cloud-300 text-cloud-900;
+}
+
+.card-surface {
+  @apply rounded-3xl border border-white/70 bg-white/80 shadow-card backdrop-blur;
+}
+
+.sky-title {
+  @apply font-[Sora] font-extrabold tracking-tight text-cloud-900;
+}
+
+.fade-in {
+  animation: fadeIn 360ms ease both;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

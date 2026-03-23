@@ -6,9 +6,18 @@ service firebase.storage {
         firestore.exists(/databases/(default)/documents/admins/$(request.auth.uid));
     }
 
+    function isValidMedia() {
+      return request.resource != null &&
+        request.resource.size < 20 * 1024 * 1024 &&
+        (
+          request.resource.contentType.matches('image/.*') ||
+          request.resource.contentType.matches('video/.*')
+        );
+    }
+
     match /products/{productId}/{allPaths=**} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write: if isAdmin() && isValidMedia();
     }
 
     match /{allPaths=**} {
