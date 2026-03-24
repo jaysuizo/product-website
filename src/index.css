@@ -8,14 +8,17 @@
 
 body {
   @apply m-0 min-h-screen bg-slate-100 font-[Manrope] text-slate-800 antialiased;
+  overflow-x: hidden;
   background-image:
     radial-gradient(circle at 8% 4%, rgba(255, 255, 255, 0.95) 0, transparent 28%),
-    radial-gradient(circle at 92% 2%, rgba(173, 204, 255, 0.6) 0, transparent 28%),
-    linear-gradient(180deg, #eff5ff 0%, #dbe8ff 42%, #e8f0ff 100%);
+    radial-gradient(circle at 92% 2%, rgba(173, 204, 255, 0.55) 0, transparent 28%),
+    radial-gradient(circle at 50% 18%, rgba(214, 230, 255, 0.45) 0, transparent 40%),
+    linear-gradient(180deg, #f2f7ff 0%, #dfeaff 44%, #edf3ff 100%);
 }
 
 #root {
   min-height: 100vh;
+  overflow-x: clip;
 }
 
 ::selection {
@@ -32,6 +35,14 @@ body {
 
 .fade-in {
   animation: fadeIn 360ms ease both;
+}
+
+details > summary {
+  list-style: none;
+}
+
+details > summary::-webkit-details-marker {
+  display: none;
 }
 
 @keyframes fadeIn {

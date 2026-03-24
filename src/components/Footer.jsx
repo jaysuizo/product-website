@@ -6,10 +6,10 @@ export default function Footer() {
   const brandName = settings.storeName || SITE_CONFIG.brandName;
 
   return (
-    <footer className="mt-16 border-t border-white/70 bg-white/60">
-      <div className="mx-auto flex w-[min(1200px,94vw)] flex-col gap-2 py-8 text-sm text-cloud-900/80 md:flex-row md:items-center md:justify-between">
-        <p>{new Date().getFullYear()} {brandName}. Product showcase website.</p>
-        <p>{settings.contactDetails || "No checkout on this site. Inquiries are handled via Messenger."}</p>
+    <footer className="mt-10 border-t border-white/70 bg-white/70 sm:mt-14">
+      <div className="mx-auto flex w-[min(1240px,95vw)] flex-wrap items-center justify-center gap-2 py-5 text-center sm:w-[min(1240px,94vw)] sm:justify-between sm:gap-3 sm:py-6 sm:text-left">
+        <p className="text-sm font-semibold text-slate-700">{brandName}</p>
+        <p className="text-xs text-slate-500">{settings.contactDetails || "Message us on Messenger for inquiries."}</p>
       </div>
     </footer>
   );

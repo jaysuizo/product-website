@@ -6,7 +6,7 @@ export default function ProductVideo({ videoUrl, productName }) {
   if (!embed) {
     return (
       <div className="card-surface p-6 text-sm text-slate-600">
-        No product video uploaded yet.
+        No product video uploaded yet. Add a YouTube, Vimeo, or uploaded video URL in admin to boost conversions.
       </div>
     );
   }

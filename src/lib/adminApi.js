@@ -11,13 +11,7 @@ import {
   serverTimestamp,
   setDoc
 } from "firebase/firestore";
-import {
-  deleteObject,
-  getDownloadURL,
-  ref,
-  uploadBytes
-} from "firebase/storage";
-import { db, storage } from "./firebaseClient";
+import { db } from "./firebaseClient";
 
 export async function isUserAdmin(uid) {
   if (!uid) {
@@ -38,45 +32,6 @@ export async function createAdminRecord(uid, email) {
     },
     { merge: true }
   );
-}
-
-export async function uploadProductFiles(productId, files) {
-  const uploaded = [];
-
-  for (const file of files) {
-    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-    const path = `products/${productId}/${Date.now()}-${safeName}`;
-    const storageRef = ref(storage, path);
-
-    await uploadBytes(storageRef, file);
-    const url = await getDownloadURL(storageRef);
-
-    uploaded.push({
-      url,
-      path,
-      type: file.type.startsWith("video/") ? "video" : "image",
-      originalName: file.name,
-      sizeBytes: Number(file.size || 0)
-    });
-  }
-
-  return uploaded;
-}
-
-export async function deleteMediaFromStorage(mediaItems) {
-  const list = Array.isArray(mediaItems) ? mediaItems : [];
-
-  for (const item of list) {
-    if (!item?.path) {
-      continue;
-    }
-
-    try {
-      await deleteObject(ref(storage, item.path));
-    } catch {
-      // Keep going; missing files should not block admin flow.
-    }
-  }
 }
 
 export async function writeInventoryLog({
@@ -105,14 +60,10 @@ export async function deleteProductRecord(productId) {
 }
 
 export async function saveProductRecord(productId, payload) {
-  await setDoc(
-    doc(db, "products", productId),
-    {
-      ...payload,
-      updatedAt: serverTimestamp()
-    },
-    { merge: true }
-  );
+  await setDoc(doc(db, "products", productId), {
+    ...payload,
+    updatedAt: serverTimestamp()
+  });
 }
 
 export function subscribeInventoryLogs(onNext, onError) {

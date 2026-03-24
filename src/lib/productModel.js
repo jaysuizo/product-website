@@ -1,73 +1,77 @@
 import { toSlug } from "./format";
 import { uniqueUrls } from "./media";
-import { DEFAULT_STORE_SETTINGS } from "../config/site";
 
-function normalizeCategory(input) {
-  const value = toSlug(input || "uncategorized");
-  return value || "uncategorized";
+function normalizeTextList(source) {
+  if (Array.isArray(source)) {
+    return source
+      .map((item) => {
+        if (typeof item === "string") {
+          return item.trim();
+        }
+
+        if (item && typeof item === "object") {
+          return String(item.label || item.size || item.value || "").trim();
+        }
+
+        return "";
+      })
+      .filter(Boolean);
+  }
+
+  if (typeof source === "string") {
+    return source
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+
+  return [];
 }
 
-function normalizeInventory(source) {
-  const list = Array.isArray(source) ? source : [];
-
-  return list
-    .map((row) => ({
-      size: String(row?.size || "").trim(),
-      stock: Math.max(0, Number.parseInt(String(row?.stock || 0), 10) || 0)
-    }))
-    .filter((row) => row.size);
+function parsePrice(value) {
+  const parsed = Number.parseFloat(String(value ?? ""));
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
 }
 
-function normalizeVariant(variant, index, galleryImages) {
-  const label = String(variant?.label || variant?.name || variant?.value || `Option ${index + 1}`).trim();
-  const image = String(variant?.image || variant?.previewImage || galleryImages[0] || "").trim();
-  const stock = Math.max(0, Number.parseInt(String(variant?.stock || 0), 10) || 0);
-
-  const rawPriceOverride = Number.parseFloat(String(variant?.priceOverride ?? ""));
-  const priceOverride = Number.isFinite(rawPriceOverride) ? rawPriceOverride : null;
-
-  return {
-    id: String(variant?.id || `variant-${index + 1}`),
-    type: String(variant?.type || "design").trim().toLowerCase() || "design",
-    value: String(variant?.value || toSlug(label) || `option-${index + 1}`).trim(),
-    label,
-    image,
-    colorHex: String(variant?.colorHex || "").trim(),
-    stock,
-    sku: String(variant?.sku || "").trim(),
-    priceOverride
-  };
-}
-
-function normalizeVariants(source, galleryImages) {
+function normalizeLegacyVariants(source, fallbackImage) {
   const variants = Array.isArray(source) ? source : [];
 
-  const cleaned = variants
-    .map((variant, index) => normalizeVariant(variant, index, galleryImages))
-    .filter((variant) => variant.label);
+  return variants
+    .map((variant, index) => {
+      const label = String(variant?.label || variant?.name || variant?.value || "").trim();
+      if (!label) {
+        return null;
+      }
 
-  if (cleaned.length > 0) {
-    return cleaned;
-  }
+      const stock = Math.max(0, Number.parseInt(String(variant?.stock || 0), 10) || 0);
+      return {
+        id: String(variant?.id || `variant-${index + 1}`),
+        type: String(variant?.type || "size").trim().toLowerCase() || "size",
+        value: String(variant?.value || toSlug(label) || `option-${index + 1}`).trim(),
+        label,
+        image: String(variant?.image || variant?.previewImage || fallbackImage || "").trim(),
+        colorHex: String(variant?.colorHex || "").trim(),
+        stock
+      };
+    })
+    .filter(Boolean);
+}
 
-  if (galleryImages.length === 0) {
-    return [];
-  }
+function normalizeSimpleVariants(sizes, fallbackImage, defaultStock) {
+  const totalStock = Math.max(0, Number.parseInt(String(defaultStock || 0), 10) || 0);
+  const itemCount = sizes.length || 1;
+  const baseStock = Math.floor(totalStock / itemCount);
+  const remainder = totalStock % itemCount;
 
-  return galleryImages.slice(0, 4).map((image, index) =>
-    normalizeVariant(
-      {
-        id: `variant-${index + 1}`,
-        type: "design",
-        value: `style-${index + 1}`,
-        label: `Style ${index + 1}`,
-        image,
-        stock: 0
-      },
-      index,
-      galleryImages
-    )
-  );
+  return sizes.map((size, index) => ({
+    id: `size-${index + 1}`,
+    type: "size",
+    value: toSlug(size) || `size-${index + 1}`,
+    label: size,
+    image: fallbackImage,
+    colorHex: "",
+    stock: totalStock <= 0 ? 0 : baseStock + (index < remainder ? 1 : 0)
+  }));
 }
 
 export function getVariantStock(variant) {
@@ -76,6 +80,11 @@ export function getVariantStock(variant) {
 }
 
 export function getProductStock(product) {
+  const explicitTotal = Number(product?.totalStock);
+  if (Number.isFinite(explicitTotal) && explicitTotal >= 0) {
+    return explicitTotal;
+  }
+
   const variants = Array.isArray(product?.variants) ? product.variants : [];
 
   if (variants.length > 0) {
@@ -83,10 +92,17 @@ export function getProductStock(product) {
   }
 
   const inventory = Array.isArray(product?.inventory) ? product.inventory : [];
-  return inventory.reduce((total, row) => {
+  const inventoryStock = inventory.reduce((total, row) => {
     const amount = Number(row?.stock || 0);
     return total + (Number.isFinite(amount) ? Math.max(0, amount) : 0);
   }, 0);
+
+  if (inventoryStock > 0) {
+    return inventoryStock;
+  }
+
+  const sizes = Array.isArray(product?.sizes) ? product.sizes : [];
+  return sizes.length > 0 ? sizes.length : 0;
 }
 
 export function getProductAvailability(product) {
@@ -109,119 +125,103 @@ export function getProductAvailability(product) {
 }
 
 export function normalizeProduct(docId, raw = {}) {
-  const mediaList = Array.isArray(raw.media) ? raw.media : [];
+  const legacyGallery = Array.isArray(raw.galleryImages) ? raw.galleryImages : [];
+  const simpleImages = Array.isArray(raw.images) ? raw.images : [];
+  const fallbackImage = String(raw.image || raw.mainImage || raw.featuredImage || simpleImages[0] || legacyGallery[0] || "").trim();
+  const galleryImages = uniqueUrls([
+    ...simpleImages,
+    fallbackImage,
+    ...legacyGallery
+  ]).slice(0, 5);
+  const mainImage = String(galleryImages[0] || fallbackImage || "").trim();
+  const sizes = normalizeTextList(raw.sizes);
+  const legacyVariants = normalizeLegacyVariants(raw.variants, mainImage);
 
-  const mediaImages = mediaList
-    .filter((item) => item && item.type !== "video" && typeof item.url === "string")
-    .map((item) => item.url);
+  const computedTotalStock =
+    Number.isFinite(Number(raw.totalStock)) && Number(raw.totalStock) >= 0
+      ? Number(raw.totalStock)
+      : legacyVariants.length > 0
+      ? legacyVariants.reduce((sum, variant) => sum + getVariantStock(variant), 0)
+      : sizes.length > 0
+      ? sizes.length
+      : 0;
 
-  const mediaVideos = mediaList
-    .filter((item) => item && item.type === "video" && typeof item.url === "string")
-    .map((item) => item.url);
-
-  const galleryImages = uniqueUrls(raw.galleryImages?.length ? raw.galleryImages : mediaImages);
-  const featuredImage = String(raw.mainImage || raw.featuredImage || galleryImages[0] || "").trim();
-  const inventory = normalizeInventory(raw.inventory?.length ? raw.inventory : raw.sizes);
+  const variants =
+    legacyVariants.length > 0
+      ? legacyVariants
+      : normalizeSimpleVariants(sizes, mainImage, computedTotalStock);
 
   const normalized = {
     id: docId,
     slug: toSlug(raw.slug || raw.name || docId),
     name: String(raw.name || "Untitled Product").trim(),
-    shortDescription: String(raw.shortDescription || raw.description || "").trim(),
-    fullDescription: String(raw.fullDescription || raw.description || "").trim(),
-    category: normalizeCategory(raw.category),
-    categoryLabel: String(raw.categoryLabel || raw.category || "Uncategorized").trim(),
-    brand: String(raw.brand || "").trim(),
+    price: parsePrice(raw.price),
+    sizes,
+    images: galleryImages,
+    image: mainImage,
+    video: String(raw.video || raw.videoUrl || "").trim(),
     status: String(raw.status || "active").toLowerCase() || "active",
-    mainImage: featuredImage,
-    featuredImage,
-    galleryImages: galleryImages.length > 0 ? galleryImages : featuredImage ? [featuredImage] : [],
-    variants: normalizeVariants(raw.variants, galleryImages.length > 0 ? galleryImages : featuredImage ? [featuredImage] : []),
-    videoUrl: String(raw.videoUrl || mediaVideos[0] || "").trim(),
-    messengerLink: String(raw.messengerLink || DEFAULT_STORE_SETTINGS.messengerLink).trim(),
-    featured: Boolean(raw.featured || raw.flashSale),
-    price: Number.isFinite(Number(raw.price)) ? Number(raw.price) : null,
-    inventory,
-    media: mediaList,
+    featured: Boolean(raw.featured),
+    category: String(raw.category || raw.categoryId || "gadgets").trim() || "gadgets",
+    categoryLabel: String(raw.categoryLabel || raw.categoryName || raw.category || raw.categoryId || "Gadgets").trim() || "Gadgets",
+    shortDescription: String(raw.shortDescription || "").trim(),
+    fullDescription: String(raw.fullDescription || "").trim(),
+    mainImage,
+    featuredImage: mainImage,
+    galleryImages: galleryImages.length > 0 ? galleryImages : mainImage ? [mainImage] : [],
+    videoUrl: String(raw.video || raw.videoUrl || "").trim(),
+    variants,
+    inventory: [],
+    totalStock: computedTotalStock,
     createdAt: raw.createdAt || null,
-    updatedAt: raw.updatedAt || null,
-    createdBy: raw.createdBy || "",
-    updatedBy: raw.updatedBy || "",
-    updatedByEmail: raw.updatedByEmail || ""
+    updatedAt: raw.updatedAt || null
   };
 
   return {
     ...normalized,
-    totalStock: getProductStock(normalized),
+    categoryId: normalized.category,
+    categoryName: normalized.categoryLabel,
     availability: getProductAvailability(normalized)
   };
 }
 
 export function buildProductPayload(form, options = {}) {
-  const galleryImages = uniqueUrls([form.mainImage || form.featuredImage, ...form.galleryImages]);
-  const mainImage = String(form.mainImage || form.featuredImage || galleryImages[0] || "").trim();
+  const name = String(form.name || "").trim();
+  const slug = toSlug(form.slug || name || options.fallbackId || "product");
+  const images = uniqueUrls(Array.isArray(form.images) ? form.images : []).slice(0, 5);
+  const image = String(images[0] || form.image || form.mainImage || "").trim();
+  const sizes = normalizeTextList(form.sizes || form.sizesText);
 
-  const variants = form.variants
-    .map((variant, index) => normalizeVariant(variant, index, galleryImages.length > 0 ? galleryImages : [mainImage]))
-    .filter((variant) => variant.label);
-
-  return {
-    slug: toSlug(form.slug || form.name || options.fallbackId),
-    name: String(form.name || "").trim(),
-    shortDescription: String(form.shortDescription || "").trim(),
-    fullDescription: String(form.fullDescription || "").trim(),
-    description: String(form.fullDescription || "").trim(),
-    category: normalizeCategory(form.category),
-    categoryLabel: String(form.categoryLabel || form.category || "Uncategorized").trim(),
-    brand: String(form.brand || "").trim(),
-    status: String(form.status || "active").toLowerCase() || "active",
-    mainImage,
-    featuredImage: mainImage,
-    galleryImages: galleryImages.length > 0 ? galleryImages : mainImage ? [mainImage] : [],
-    variants,
-    videoUrl: String(form.videoUrl || "").trim(),
-    messengerLink: String(form.messengerLink || DEFAULT_STORE_SETTINGS.messengerLink).trim(),
+  const payload = {
+    name,
+    slug,
+    price: parsePrice(form.price),
     featured: Boolean(form.featured),
-    price: form.price,
-    inventory: form.inventory,
-    sizes: form.inventory,
-    media: form.media,
-    flashSale: Boolean(form.featured)
+    sizes,
+    images: image ? (images.length ? images : [image]) : [],
+    image,
+    video: String(form.video || form.videoUrl || "").trim()
   };
+
+  if (form.createdAt) {
+    payload.createdAt = form.createdAt;
+  }
+
+  return payload;
 }
 
 export function createEmptyProductForm() {
   return {
     id: "",
     name: "",
-    slug: "",
-    category: "gadgets",
-    categoryLabel: "Gadgets",
-    brand: "",
-    status: "active",
-    shortDescription: "",
-    fullDescription: "",
-    mainImage: "",
-    featuredImage: "",
-    galleryImages: [],
-    variants: [
-      {
-        id: "variant-1",
-        type: "color",
-        value: "default",
-        label: "Default",
-        image: "",
-        colorHex: "#4d8ef7",
-        stock: 0,
-        sku: "",
-        priceOverride: ""
-      }
-    ],
-    videoUrl: "",
-    messengerLink: DEFAULT_STORE_SETTINGS.messengerLink,
-    featured: false,
     price: "",
-    inventory: [{ size: "Standard", stock: 0 }],
-    media: []
+    featured: false,
+    sizesText: "",
+    imageUrlsText: "",
+    images: [],
+    image: "",
+    video: "",
+    slug: "",
+    createdAt: null
   };
 }

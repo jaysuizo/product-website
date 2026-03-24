@@ -1,5 +1,9 @@
 {
   "projects": {
-    "default": "my-store-website-5ec32"
-  }
+    "default": "my-store-website-5ec32",
+    "q": "my-store-website-5ec32",
+    "store": "my-store-website-5ec32"
+  },
+  "targets": {},
+  "etags": {}
 }

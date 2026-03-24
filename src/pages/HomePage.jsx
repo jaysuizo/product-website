@@ -1,123 +1,82 @@
-import { Link } from "react-router-dom";
+import { useMemo, useState } from "react";
 import { useProducts } from "../contexts/ProductsContext";
-import SectionHeading from "../components/SectionHeading";
-import ProductGrid from "../components/ProductGrid";
-import LoadingState from "../components/LoadingState";
 import EmptyState from "../components/EmptyState";
+import LoadingState from "../components/LoadingState";
+import ProductGrid from "../components/ProductGrid";
+import ProductDetailModal from "../components/ProductDetailModal";
+import { SITE_CONFIG } from "../config/site";
 
 export default function HomePage() {
-  const { products, categories, settings, loading, error } = useProducts();
+  const { products, settings, loading, error, warning } = useProducts();
+  const [selectedProduct, setSelectedProduct] = useState(null);
 
-  const featuredProducts = products.filter((product) => product.featured && product.status !== "inactive").slice(0, 8);
-  const showcaseProducts = featuredProducts.length > 0 ? featuredProducts : products.slice(0, 8);
-
-  const categoryStats = categories.map((category) => ({
-    category: category.slug,
-    name: category.name,
-    count: products.filter((product) => product.category === category.slug).length
-  }));
+  const activeProducts = useMemo(
+    () => products.filter((product) => product.status !== "inactive"),
+    [products]
+  );
+  const featuredProducts = useMemo(
+    () => activeProducts.filter((product) => product.featured),
+    [activeProducts]
+  );
 
   return (
-    <div className="space-y-8">
-      <section className="card-surface relative overflow-hidden p-8 md:p-10">
-        <div className="absolute -top-20 right-0 h-56 w-56 rounded-full bg-cloud-200/70 blur-2xl" />
-        <div className="absolute -bottom-20 -left-10 h-64 w-64 rounded-full bg-white/80 blur-3xl" />
+    <div className="space-y-4 sm:space-y-7">
+      {warning ? (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-700">
+          {warning}
+        </div>
+      ) : null}
 
-        <div className="relative grid gap-8 md:grid-cols-[1.2fr_1fr] md:items-end">
-          <div>
-            <p className="mb-3 inline-flex rounded-full bg-cloud-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] text-cloud-700">
-              Live catalog system
-            </p>
-            <h1 className="sky-title max-w-2xl text-4xl leading-tight md:text-5xl">
-              {settings.storeName || "MyStore"} dynamic product browsing with modern Shopee-like UX.
-            </h1>
-            <p className="mt-5 max-w-xl text-slate-600">
-              Search, filter, compare variants, and contact seller instantly via Messenger. Inventory and products are fully managed from the admin dashboard.
-            </p>
+      <section className="card-surface relative overflow-hidden px-4 py-5 sm:px-8 sm:py-10">
+        <div className="absolute -top-20 right-0 h-72 w-72 rounded-full bg-cloud-200/70 blur-3xl" />
+        <div className="absolute -bottom-24 -left-8 h-72 w-72 rounded-full bg-blue-200/45 blur-3xl" />
 
-            <div className="mt-7 flex flex-wrap gap-3">
-              <Link to="/shop" className="rounded-2xl bg-cloud-500 px-6 py-3 text-sm font-bold text-white hover:bg-cloud-700">
-                Browse Products
-              </Link>
-              <Link
-                to="/admin"
-                className="rounded-2xl border border-cloud-200 bg-white px-6 py-3 text-sm font-bold text-cloud-700 hover:border-cloud-400"
-              >
-                Manage Inventory
-              </Link>
-            </div>
-          </div>
-
-          <div className="grid gap-3 sm:grid-cols-2">
-            <article className="rounded-2xl border border-white/70 bg-white/85 p-4">
-              <p className="text-sm font-semibold text-slate-500">Live products</p>
-              <p className="mt-2 text-3xl font-black text-cloud-900">{products.length}</p>
-            </article>
-            <article className="rounded-2xl border border-white/70 bg-white/85 p-4">
-              <p className="text-sm font-semibold text-slate-500">Featured now</p>
-              <p className="mt-2 text-3xl font-black text-cloud-900">{featuredProducts.length}</p>
-            </article>
-            <article className="rounded-2xl border border-white/70 bg-white/85 p-4 sm:col-span-2">
-              <p className="text-sm font-semibold text-slate-500">Contact flow</p>
-              <p className="mt-2 text-lg font-extrabold text-cloud-700">Messenger-first inquiries, no checkout</p>
-            </article>
-          </div>
+        <div className="relative max-w-2xl space-y-2.5 sm:space-y-4">
+          <p className="text-xs font-bold uppercase tracking-[0.2em] text-cloud-700">Single Store</p>
+          <h1 className="sky-title text-2xl leading-tight sm:text-5xl">Premium Products</h1>
+          <p className="text-sm font-semibold text-slate-700 sm:text-lg">Simple. Clean. Quality.</p>
         </div>
       </section>
 
-      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-        {categoryStats.map((item) => (
-          <article key={item.category} className="card-surface p-4 text-center">
-            <p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">{item.name}</p>
-            <p className="mt-2 text-2xl font-black text-cloud-900">{item.count}</p>
-          </article>
-        ))}
-      </section>
+      {!loading && !error && featuredProducts.length > 0 ? (
+        <section className="space-y-2.5 sm:space-y-3">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <h2 className="sky-title text-xl sm:text-4xl">Featured Products</h2>
+            <p className="text-xs font-semibold text-slate-600 sm:text-sm">{featuredProducts.length} featured</p>
+          </div>
+          <ProductGrid
+            products={featuredProducts}
+            onSelect={setSelectedProduct}
+            messengerUrl={settings.messengerLink || SITE_CONFIG.messengerUrl}
+          />
+        </section>
+      ) : null}
 
-      <section>
-        <SectionHeading
-          title="Featured Products"
-          description="Open product pages to view gallery, stock-aware variants, videos, and Messenger inquiry CTA."
-          rightSlot={
-            <Link to="/shop" className="text-sm font-bold text-cloud-700 hover:text-cloud-900">
-              View full catalog &rarr;
-            </Link>
-          }
-        />
+      <section id="products" className="space-y-2.5 sm:space-y-3">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <h2 className="sky-title text-xl sm:text-4xl">Products</h2>
+          <p className="text-xs font-semibold text-slate-600 sm:text-sm">{activeProducts.length} items</p>
+        </div>
 
-        {loading ? <LoadingState label="Loading storefront products..." /> : null}
-        {!loading && error ? (
-          <EmptyState
-            title="Firebase connection issue"
-            description={error}
+        {loading ? <LoadingState kind="products" label="Loading products..." /> : null}
+        {!loading && error ? <EmptyState title="Cannot load products" description={error} /> : null}
+        {!loading && !error && activeProducts.length === 0 ? (
+          <EmptyState title="No products yet" description="Add products from admin to publish your catalog." />
+        ) : null}
+        {!loading && !error && activeProducts.length > 0 ? (
+          <ProductGrid
+            products={activeProducts}
+            onSelect={setSelectedProduct}
+            messengerUrl={settings.messengerLink || SITE_CONFIG.messengerUrl}
           />
         ) : null}
-        {!loading && !error && showcaseProducts.length === 0 ? (
-          <EmptyState
-            title="No products yet"
-            description="Sign in as admin and upload your first products to start showcasing your catalog."
-          />
-        ) : null}
-        {!loading && !error && showcaseProducts.length > 0 ? <ProductGrid products={showcaseProducts} /> : null}
       </section>
 
-      <section className="grid gap-4 md:grid-cols-3">
-        <article className="card-surface p-6">
-          <p className="text-xs font-bold uppercase tracking-[0.14em] text-cloud-700">Dynamic inventory</p>
-          <h3 className="sky-title mt-2 text-2xl">Stock-aware variants</h3>
-          <p className="mt-3 text-sm text-slate-600">Each variant has its own stock so customers can only select valid options.</p>
-        </article>
-        <article className="card-surface p-6">
-          <p className="text-xs font-bold uppercase tracking-[0.14em] text-cloud-700">Admin workflow</p>
-          <h3 className="sky-title mt-2 text-2xl">Fast CRUD management</h3>
-          <p className="mt-3 text-sm text-slate-600">Add/edit/delete products, update categories, and manage inventory logs from one dashboard.</p>
-        </article>
-        <article className="card-surface p-6">
-          <p className="text-xs font-bold uppercase tracking-[0.14em] text-cloud-700">Messenger funnel</p>
-          <h3 className="sky-title mt-2 text-2xl">Contact seller instantly</h3>
-          <p className="mt-3 text-sm text-slate-600">Replace checkout complexity with direct Messenger inquiries for faster conversions.</p>
-        </article>
-      </section>
+      <ProductDetailModal
+        product={selectedProduct}
+        messengerUrl={settings.messengerLink || SITE_CONFIG.messengerUrl}
+        onClose={() => setSelectedProduct(null)}
+      />
     </div>
   );
 }

@@ -1,35 +1,32 @@
 import { useEffect, useMemo, useState } from "react";
-import {
-  createUserWithEmailAndPassword,
-  onAuthStateChanged,
-  signInWithEmailAndPassword,
-  signOut
-} from "firebase/auth";
+import { onAuthStateChanged, signInWithEmailAndPassword, signOut } from "firebase/auth";
 import { collection, doc, serverTimestamp } from "firebase/firestore";
 import AdminAuthPanel from "../components/admin/AdminAuthPanel";
-import AdminCategoryManager from "../components/admin/AdminCategoryManager";
-import AdminInventoryLogs from "../components/admin/AdminInventoryLogs";
 import AdminProductForm from "../components/admin/AdminProductForm";
 import AdminProductList from "../components/admin/AdminProductList";
 import AdminStoreSettings from "../components/admin/AdminStoreSettings";
-import { DEFAULT_STORE_SETTINGS, MAX_PRODUCT_MEDIA_BYTES } from "../config/site";
+import { DEFAULT_STORE_SETTINGS } from "../config/site";
 import { useProducts } from "../contexts/ProductsContext";
 import {
   createAdminRecord,
-  deleteCategoryRecord,
-  deleteMediaFromStorage,
   deleteProductRecord,
   isUserAdmin,
-  saveCategoryRecord,
   saveProductRecord,
-  saveStoreSettings,
-  subscribeInventoryLogs,
-  uploadProductFiles,
-  writeInventoryLog
+  saveStoreSettings
 } from "../lib/adminApi";
 import { auth, db } from "../lib/firebaseClient";
-import { bytesToMbText, toSlug } from "../lib/format";
+import { toSlug } from "../lib/format";
 import { buildProductPayload, createEmptyProductForm, getProductStock } from "../lib/productModel";
+
+const ADMIN_ALLOWLIST = String(import.meta.env.VITE_ADMIN_ALLOWLIST || "")
+  .split(",")
+  .map((email) => email.trim().toLowerCase())
+  .filter(Boolean);
+
+function isAllowlistedAdminEmail(email) {
+  const normalized = String(email || "").trim().toLowerCase();
+  return normalized && ADMIN_ALLOWLIST.includes(normalized);
+}
 
 function getFriendlyError(error) {
   const code = String(error?.code || "");
@@ -37,15 +34,9 @@ function getFriendlyError(error) {
   if (code.includes("invalid-credential")) {
     return "Invalid email or password.";
   }
-
-  if (code.includes("email-already-in-use")) {
-    return "Email already in use. Sign in instead.";
-  }
-
   if (code.includes("weak-password")) {
     return "Password is too weak. Use at least 6 characters.";
   }
-
   if (code.includes("permission-denied")) {
     return "Permission denied. Check Firestore/Storage rules.";
   }
@@ -53,60 +44,36 @@ function getFriendlyError(error) {
   return error?.message || "Unexpected error.";
 }
 
-function getMediaKey(item) {
-  return item?.path || item?.url || "";
+function parseSizesText(value) {
+  return String(value || "")
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
 }
 
-function sumMediaBytes(mediaItems) {
-  return mediaItems.reduce((total, item) => {
-    const bytes = Number(item?.sizeBytes || 0);
-    return total + (Number.isFinite(bytes) && bytes > 0 ? bytes : 0);
-  }, 0);
-}
-
-function sumSelectedFileBytes(files) {
-  return files.reduce((total, file) => total + (Number(file?.size || 0) || 0), 0);
-}
-
-function getDraftTotalStock(draft) {
-  const variantList = Array.isArray(draft?.variants) ? draft.variants : [];
-
-  if (variantList.length > 0) {
-    return variantList.reduce((total, variant) => {
-      const amount = Number(variant?.stock || 0);
-      return total + (Number.isFinite(amount) ? Math.max(0, amount) : 0);
-    }, 0);
-  }
-
-  const inventory = Array.isArray(draft?.inventory) ? draft.inventory : [];
-  return inventory.reduce((total, row) => {
-    const amount = Number(row?.stock || 0);
-    return total + (Number.isFinite(amount) ? Math.max(0, amount) : 0);
-  }, 0);
+function parseImageUrls(value) {
+  return String(value || "")
+    .split(/\r?\n|,/)
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .slice(0, 5);
 }
 
 export default function AdminPage() {
-  const { products, categories, settings } = useProducts();
+  const { liveProducts, settings, warning, usingDemoData } = useProducts();
   const [authUser, setAuthUser] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [authBusy, setAuthBusy] = useState(false);
   const [authForm, setAuthForm] = useState({ email: "", password: "" });
-  const [authMessage, setAuthMessage] = useState("Sign in or create an admin account.");
+  const [authMessage, setAuthMessage] = useState("Sign in with your admin account.");
   const [authError, setAuthError] = useState("");
+  const [adminProvisionMessage, setAdminProvisionMessage] = useState("");
 
   const [activeTab, setActiveTab] = useState("form");
-  const [logs, setLogs] = useState([]);
-
   const [form, setForm] = useState(createEmptyProductForm());
-  const [selectedFiles, setSelectedFiles] = useState([]);
-  const [removedMediaKeys, setRemovedMediaKeys] = useState(() => new Set());
   const [formBusy, setFormBusy] = useState(false);
   const [formMessage, setFormMessage] = useState("");
   const [formError, setFormError] = useState(false);
-
-  const [categoryForm, setCategoryForm] = useState({ name: "", image: "" });
-  const [categoryMessage, setCategoryMessage] = useState("");
-  const [categoryError, setCategoryError] = useState(false);
 
   const [settingsForm, setSettingsForm] = useState(DEFAULT_STORE_SETTINGS);
   const [settingsMessage, setSettingsMessage] = useState("");
@@ -123,32 +90,10 @@ export default function AdminPage() {
   }, [settings]);
 
   useEffect(() => {
-    if (!categories.length) {
-      return;
-    }
-
-    setForm((current) => {
-      if (current.id) {
-        return current;
-      }
-
-      const matchedCategory = categories.find((category) => category.slug === current.category);
-      if (matchedCategory) {
-        return current;
-      }
-
-      return {
-        ...current,
-        category: categories[0].slug,
-        categoryLabel: categories[0].name
-      };
-    });
-  }, [categories]);
-
-  useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setAuthUser(user);
       setAuthError("");
+      setAdminProvisionMessage("");
       setAuthMessage(user ? "Checking admin permission..." : "Signed out.");
 
       if (!user) {
@@ -157,9 +102,15 @@ export default function AdminPage() {
       }
 
       try {
-        const allowed = await isUserAdmin(user.uid);
-        setIsAdmin(allowed);
+        let allowed = await isUserAdmin(user.uid);
 
+        if (!allowed && isAllowlistedAdminEmail(user.email)) {
+          await createAdminRecord(user.uid, user.email || "");
+          allowed = true;
+          setAdminProvisionMessage("Admin role was auto-provisioned from allowlist.");
+        }
+
+        setIsAdmin(allowed);
         if (allowed) {
           setAuthMessage(`Admin access granted: ${user.email || "Unknown email"}`);
           return;
@@ -167,6 +118,7 @@ export default function AdminPage() {
 
         setAuthError("This account is not in admins collection.");
       } catch (error) {
+        console.error("Admin role check failed:", error);
         setIsAdmin(false);
         setAuthError(getFriendlyError(error));
       }
@@ -175,33 +127,17 @@ export default function AdminPage() {
     return () => unsubscribe();
   }, []);
 
-  useEffect(() => {
-    if (!isAdmin) {
-      setLogs([]);
-      return undefined;
-    }
+  const adminProducts = useMemo(() => liveProducts, [liveProducts]);
+  const stats = useMemo(() => {
+    const totalStock = adminProducts.reduce((sum, item) => sum + getProductStock(item), 0);
+    const withVideo = adminProducts.filter((item) => item.videoUrl).length;
+    const variantOptions = adminProducts.reduce((sum, item) => sum + (item.sizes?.length || 0), 0);
 
-    const unsubscribe = subscribeInventoryLogs(
-      (items) => setLogs(items),
-      () => setLogs([])
-    );
-
-    return () => unsubscribe();
-  }, [isAdmin]);
-
-  const adminProducts = useMemo(() => products, [products]);
+    return { totalStock, withVideo, variantOptions };
+  }, [adminProducts]);
 
   function resetFormState() {
-    const defaultCategory = categories[0]?.slug || "uncategorized";
-    const defaultCategoryLabel = categories[0]?.name || "Uncategorized";
-    setForm({
-      ...createEmptyProductForm(),
-      category: defaultCategory,
-      categoryLabel: defaultCategoryLabel,
-      messengerLink: settings.messengerLink || createEmptyProductForm().messengerLink
-    });
-    setSelectedFiles([]);
-    setRemovedMediaKeys(new Set());
+    setForm(createEmptyProductForm());
   }
 
   function setAuthFormValue(key, value) {
@@ -215,30 +151,9 @@ export default function AdminPage() {
     try {
       await signInWithEmailAndPassword(auth, authForm.email.trim(), authForm.password);
       setAuthForm({ email: "", password: "" });
-      setActiveTab("inventory");
+      setActiveTab("manage");
     } catch (error) {
-      setAuthError(getFriendlyError(error));
-    } finally {
-      setAuthBusy(false);
-    }
-  }
-
-  async function handleSignUp() {
-    setAuthBusy(true);
-    setAuthError("");
-
-    try {
-      const credential = await createUserWithEmailAndPassword(
-        auth,
-        authForm.email.trim(),
-        authForm.password
-      );
-
-      await createAdminRecord(credential.user.uid, credential.user.email || authForm.email.trim());
-      setAuthForm({ email: "", password: "" });
-      setActiveTab("inventory");
-      setAuthMessage("Admin account created and signed in.");
-    } catch (error) {
+      console.error("Admin sign-in failed:", error);
       setAuthError(getFriendlyError(error));
     } finally {
       setAuthBusy(false);
@@ -252,48 +167,35 @@ export default function AdminPage() {
   }
 
   function handleEditProduct(product) {
+    const sizeValues = Array.isArray(product.sizes) && product.sizes.length > 0
+      ? product.sizes
+      : Array.isArray(product.variants)
+      ? product.variants.map((variant) => variant.label).filter(Boolean)
+      : [];
+    const sizesText = sizeValues.join(", ");
+
     setForm({
       id: product.id,
-      name: product.name,
-      slug: product.slug,
-      category: product.category,
-      categoryLabel: product.categoryLabel || product.category,
-      brand: product.brand || "",
-      status: product.status || "active",
-      shortDescription: product.shortDescription,
-      fullDescription: product.fullDescription,
-      mainImage: product.mainImage || product.featuredImage,
-      featuredImage: product.featuredImage,
-      galleryImages: [...product.galleryImages],
-      variants: product.variants.length
-        ? product.variants.map((variant) => ({ ...variant, priceOverride: variant.priceOverride ?? "" }))
-        : [{ id: "variant-1", type: "design", value: "default", label: "Default", image: "", stock: 0, sku: "", priceOverride: "", colorHex: "" }],
-      videoUrl: product.videoUrl,
-      messengerLink: product.messengerLink,
-      featured: product.featured,
+      name: product.name || "",
       price: product.price ?? "",
-      inventory: product.inventory.length ? [...product.inventory] : [{ size: "Standard", stock: 0 }],
-      media: Array.isArray(product.media) ? [...product.media] : []
+      featured: Boolean(product.featured),
+      sizesText,
+      images: Array.isArray(product.images) && product.images.length > 0 ? [...product.images] : [...(product.galleryImages || [])].slice(0, 5),
+      imageUrlsText: Array.isArray(product.images) && product.images.length > 0
+        ? product.images.join("\n")
+        : Array.isArray(product.galleryImages) && product.galleryImages.length > 0
+        ? product.galleryImages.slice(0, 5).join("\n")
+        : "",
+      image: product.image || product.mainImage || "",
+      video: product.video || product.videoUrl || "",
+      slug: product.slug || "",
+      createdAt: product.createdAt || null
     });
 
-    setSelectedFiles([]);
-    setRemovedMediaKeys(new Set());
     setFormMessage(`Editing ${product.name}`);
     setFormError(false);
     setActiveTab("form");
     window.scrollTo({ top: 0, behavior: "smooth" });
-  }
-
-  function toggleRemoveMedia(mediaKey) {
-    setRemovedMediaKeys((current) => {
-      const next = new Set(current);
-      if (next.has(mediaKey)) {
-        next.delete(mediaKey);
-      } else {
-        next.add(mediaKey);
-      }
-      return next;
-    });
   }
 
   async function handleDeleteProduct(product) {
@@ -301,7 +203,7 @@ export default function AdminPage() {
       return;
     }
 
-    const confirmed = window.confirm(`Delete \"${product.name}\"?`);
+    const confirmed = window.confirm(`Delete "${product.name}"?`);
     if (!confirmed) {
       return;
     }
@@ -311,18 +213,7 @@ export default function AdminPage() {
     setFormError(false);
 
     try {
-      await deleteMediaFromStorage(product.media || []);
       await deleteProductRecord(product.id);
-
-      await writeInventoryLog({
-        adminUid: authUser.uid,
-        adminEmail: authUser.email || "",
-        action: "deleted",
-        productId: product.id,
-        productName: product.name,
-        previousStock: getProductStock(product),
-        currentStock: 0
-      });
 
       if (form.id === product.id) {
         resetFormState();
@@ -331,6 +222,7 @@ export default function AdminPage() {
       setFormMessage("Product deleted successfully.");
       setFormError(false);
     } catch (error) {
+      console.error("Delete product failed:", error);
       setFormMessage(getFriendlyError(error));
       setFormError(true);
     } finally {
@@ -350,205 +242,49 @@ export default function AdminPage() {
     setFormError(false);
 
     try {
-      const name = form.name.trim();
+      const name = String(form.name || "").trim();
       if (!name) {
         throw new Error("Product name is required.");
       }
 
-      const fullDescription = form.fullDescription.trim();
-      if (!fullDescription) {
-        throw new Error("Full description is required.");
-      }
-
-      const selectedCategory = categories.find((category) => category.slug === form.category);
-      if (!selectedCategory) {
-        throw new Error("Choose a valid category.");
-      }
-
-      const inventory = form.inventory
-        .map((row) => ({
-          size: String(row.size || "").trim(),
-          stock: Math.max(0, Number.parseInt(String(row.stock || 0), 10) || 0)
-        }))
-        .filter((row) => row.size);
-
-      const variants = form.variants
-        .map((variant, index) => {
-          const parsedPriceOverride = Number.parseFloat(String(variant.priceOverride ?? ""));
-
-          return {
-            id: variant.id || `variant-${index + 1}`,
-            type: String(variant.type || "design").trim().toLowerCase() || "design",
-            value: String(variant.value || toSlug(variant.label || `option-${index + 1}`)).trim(),
-            label: String(variant.label || "").trim(),
-            image: String(variant.image || variant.previewImage || "").trim(),
-            colorHex: String(variant.colorHex || "").trim(),
-            stock: Math.max(0, Number.parseInt(String(variant.stock || 0), 10) || 0),
-            sku: String(variant.sku || "").trim(),
-            priceOverride: Number.isFinite(parsedPriceOverride) ? parsedPriceOverride : null
-          };
-        })
-        .filter((variant) => variant.label);
-
-      if (variants.length === 0) {
-        throw new Error("Add at least one variant option.");
-      }
-
       const productId = form.id || doc(collection(db, "products")).id;
-      const keptMedia = (form.media || []).filter((item) => !removedMediaKeys.has(getMediaKey(item)));
-      const existingBytes = sumMediaBytes(keptMedia);
-      const selectedBytes = sumSelectedFileBytes(selectedFiles);
+      const imageUrlsFromForm = parseImageUrls(form.imageUrlsText);
+      const images = imageUrlsFromForm.length > 0
+        ? imageUrlsFromForm
+        : (Array.isArray(form.images) ? form.images.filter(Boolean).slice(0, 5) : []);
 
-      if (existingBytes + selectedBytes > MAX_PRODUCT_MEDIA_BYTES) {
-        throw new Error(
-          `Media exceeds 20 MB. Current selection: ${bytesToMbText(
-            existingBytes + selectedBytes
-          )}. Limit: ${bytesToMbText(MAX_PRODUCT_MEDIA_BYTES)}.`
-        );
+      if (images.length === 0) {
+        throw new Error("Add at least one image URL.");
       }
-
-      const uploadedMedia = selectedFiles.length > 0 ? await uploadProductFiles(productId, selectedFiles) : [];
-      const nextMedia = [...keptMedia, ...uploadedMedia];
-      const imageUrls = nextMedia.filter((item) => item.type === "image").map((item) => item.url);
-      const videoUrls = nextMedia.filter((item) => item.type === "video").map((item) => item.url);
-
-      const galleryImages = [form.mainImage, form.featuredImage, ...form.galleryImages, ...imageUrls]
-        .map((entry) => String(entry || "").trim())
-        .filter(Boolean);
-
-      const parsedPrice = Number.parseFloat(String(form.price || ""));
-      const price = Number.isFinite(parsedPrice) && parsedPrice >= 0 ? parsedPrice : null;
 
       const payload = buildProductPayload(
         {
           ...form,
-          slug: toSlug(form.slug || name),
           name,
-          category: selectedCategory.slug,
-          categoryLabel: selectedCategory.name,
-          fullDescription,
-          shortDescription: form.shortDescription.trim(),
-          mainImage: String(form.mainImage || galleryImages[0] || "").trim(),
-          featuredImage: String(form.mainImage || galleryImages[0] || "").trim(),
-          galleryImages,
-          variants,
-          videoUrl: String(form.videoUrl || videoUrls[0] || "").trim(),
-          messengerLink: String(form.messengerLink || settings.messengerLink || "").trim(),
-          inventory,
-          price,
-          media: nextMedia,
-          status: form.status,
-          brand: form.brand
+          slug: toSlug(form.slug || name),
+          sizes: parseSizesText(form.sizesText),
+          images,
+          image: images[0],
+          video: String(form.video || "").trim()
         },
         { fallbackId: productId }
       );
 
-      const oldStock = getDraftTotalStock(form);
-      const newStock = getDraftTotalStock({ variants, inventory });
-
-      const savePayload = {
+      await saveProductRecord(productId, {
         ...payload,
-        updatedBy: authUser.uid,
-        updatedByEmail: authUser.email || ""
-      };
-
-      if (!form.id) {
-        savePayload.createdAt = serverTimestamp();
-        savePayload.createdBy = authUser.uid;
-        savePayload.createdByEmail = authUser.email || "";
-      }
-
-      await saveProductRecord(productId, savePayload);
-
-      const removedItems = (form.media || []).filter((item) => removedMediaKeys.has(getMediaKey(item)));
-      if (removedItems.length > 0) {
-        await deleteMediaFromStorage(removedItems);
-      }
-
-      await writeInventoryLog({
-        adminUid: authUser.uid,
-        adminEmail: authUser.email || "",
-        action: form.id ? "updated" : "created",
-        productId,
-        productName: payload.name,
-        previousStock: oldStock,
-        currentStock: newStock
+        createdAt: form.createdAt || serverTimestamp()
       });
 
       resetFormState();
       setFormMessage(form.id ? "Product updated successfully." : "Product created successfully.");
       setFormError(false);
-      setActiveTab("inventory");
+      setActiveTab("manage");
     } catch (error) {
+      console.error("Save product failed:", error);
       setFormMessage(getFriendlyError(error));
       setFormError(true);
     } finally {
       setFormBusy(false);
-    }
-  }
-
-  function setCategoryFormValue(key, value) {
-    setCategoryForm((current) => ({ ...current, [key]: value }));
-  }
-
-  async function handleSaveCategory() {
-    if (!authUser || !isAdmin) {
-      return;
-    }
-
-    setCategoryMessage("");
-    setCategoryError(false);
-
-    try {
-      const name = categoryForm.name.trim();
-      if (!name) {
-        throw new Error("Category name is required.");
-      }
-
-      const slug = toSlug(name);
-      await saveCategoryRecord(slug, {
-        name,
-        slug,
-        image: String(categoryForm.image || "").trim(),
-        createdAt: serverTimestamp(),
-        updatedBy: authUser.uid,
-        updatedByEmail: authUser.email || ""
-      });
-
-      setCategoryForm({ name: "", image: "" });
-      setCategoryMessage("Category saved.");
-      setCategoryError(false);
-    } catch (error) {
-      setCategoryMessage(getFriendlyError(error));
-      setCategoryError(true);
-    }
-  }
-
-  async function handleDeleteCategory(category) {
-    if (!authUser || !isAdmin) {
-      return;
-    }
-
-    const productsUsingCategory = products.filter((product) => product.category === category.slug).length;
-
-    if (productsUsingCategory > 0) {
-      setCategoryMessage(`Cannot delete ${category.name}. ${productsUsingCategory} product(s) still use this category.`);
-      setCategoryError(true);
-      return;
-    }
-
-    const confirmed = window.confirm(`Delete category \"${category.name}\"?`);
-    if (!confirmed) {
-      return;
-    }
-
-    try {
-      await deleteCategoryRecord(category.id);
-      setCategoryMessage("Category deleted.");
-      setCategoryError(false);
-    } catch (error) {
-      setCategoryMessage(getFriendlyError(error));
-      setCategoryError(true);
     }
   }
 
@@ -578,123 +314,129 @@ export default function AdminPage() {
       setSettingsMessage("Store settings updated.");
       setSettingsError(false);
     } catch (error) {
+      console.error("Save settings failed:", error);
       setSettingsMessage(getFriendlyError(error));
       setSettingsError(true);
     }
   }
 
-  const tabButtonClass = (tab) =>
-    `rounded-full px-4 py-2 text-sm font-bold transition ${
-      activeTab === tab
-        ? "bg-cloud-500 text-white"
-        : "border border-cloud-200 bg-white text-cloud-700 hover:border-cloud-400"
-    }`;
+  const tabItems = [
+    { id: "form", label: "Product Form" },
+    { id: "manage", label: "Manage Products" },
+    { id: "settings", label: "Store Settings" }
+  ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
+      {warning ? (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-700">
+          {warning}
+        </div>
+      ) : null}
+
       <AdminAuthPanel
         user={authUser}
         isAdmin={isAdmin}
         authForm={authForm}
         onAuthFormChange={setAuthFormValue}
         onSignIn={handleSignIn}
-        onSignUp={handleSignUp}
         onLogout={handleLogout}
         authMessage={authMessage}
         authError={authError}
         busy={authBusy}
       />
 
+      {adminProvisionMessage ? (
+        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">
+          {adminProvisionMessage}
+        </div>
+      ) : null}
+
       {authUser && isAdmin ? (
         <>
-          <section className="card-surface p-4">
-            <div className="flex flex-wrap gap-2">
-              <button type="button" onClick={() => setActiveTab("form")} className={tabButtonClass("form")}>
-                Product Form
-              </button>
-              <button type="button" onClick={() => setActiveTab("manage")} className={tabButtonClass("manage")}>
-                Manage Products
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveTab("inventory")}
-                className={tabButtonClass("inventory")}
-              >
-                Inventory Logs
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveTab("categories")}
-                className={tabButtonClass("categories")}
-              >
-                Categories
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveTab("settings")}
-                className={tabButtonClass("settings")}
-              >
-                Store Settings
-              </button>
-            </div>
+          <section className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
+            <article className="card-surface p-4 sm:p-5">
+              <p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">Products</p>
+              <p className="mt-1.5 text-2xl font-black text-cloud-900 sm:text-3xl">{adminProducts.length}</p>
+            </article>
+            <article className="card-surface p-4 sm:p-5">
+              <p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">Variant Options</p>
+              <p className="mt-1.5 text-2xl font-black text-cloud-900 sm:text-3xl">{stats.variantOptions}</p>
+            </article>
+            <article className="card-surface p-4 sm:p-5">
+              <p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">With Video</p>
+              <p className="mt-1.5 text-2xl font-black text-cloud-900 sm:text-3xl">{stats.withVideo}</p>
+            </article>
+            <article className="card-surface p-4 sm:p-5">
+              <p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">Total Stock</p>
+              <p className="mt-1.5 text-2xl font-black text-cloud-900 sm:text-3xl">{stats.totalStock}</p>
+            </article>
           </section>
 
-          {activeTab === "form" ? (
-            <AdminProductForm
-              form={form}
-              setForm={setForm}
-              categories={categories}
-              selectedFiles={selectedFiles}
-              setSelectedFiles={setSelectedFiles}
-              removedMediaKeys={removedMediaKeys}
-              onToggleRemoveMedia={toggleRemoveMedia}
-              onSubmit={handleSubmitProduct}
-              onCancel={() => {
-                resetFormState();
-                setFormMessage("Edit cancelled.");
-                setFormError(false);
-              }}
-              isEditing={Boolean(form.id)}
-              busy={formBusy}
-              formMessage={formMessage}
-              formError={formError}
-            />
+          {usingDemoData ? (
+            <section className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-700">
+              You are viewing demo storefront data. Admin management only affects your live Firebase products.
+            </section>
           ) : null}
 
-          {activeTab === "manage" ? (
-            <AdminProductList
-              products={adminProducts}
-              onEdit={handleEditProduct}
-              onDelete={handleDeleteProduct}
-              busy={formBusy}
-            />
-          ) : null}
+          <section className="grid gap-4 xl:grid-cols-[260px_1fr]">
+            <aside className="card-surface p-3.5 sm:p-4">
+              <p className="mb-2 text-xs font-bold uppercase tracking-[0.13em] text-slate-500 sm:mb-3">Admin Sections</p>
+              <div className="flex gap-2 overflow-x-auto pb-1 xl:grid xl:overflow-visible xl:pb-0">
+                {tabItems.map((item) => {
+                  const active = activeTab === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => setActiveTab(item.id)}
+                      className={`whitespace-nowrap rounded-xl px-3 py-2 text-left text-sm font-bold transition ${
+                        active
+                          ? "bg-cloud-500 text-white"
+                          : "border border-cloud-200 bg-white text-cloud-700 hover:border-cloud-400"
+                      }`}
+                    >
+                      {item.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </aside>
 
-          {activeTab === "inventory" ? <AdminInventoryLogs logs={logs} /> : null}
+            <div className="space-y-4">
+              {activeTab === "form" ? (
+                <AdminProductForm
+                  form={form}
+                  setForm={setForm}
+                  onSubmit={handleSubmitProduct}
+                  onCancel={() => {
+                    resetFormState();
+                    setFormMessage("Edit cancelled.");
+                    setFormError(false);
+                  }}
+                  isEditing={Boolean(form.id)}
+                  busy={formBusy}
+                  formMessage={formMessage}
+                  formError={formError}
+                />
+              ) : null}
 
-          {activeTab === "categories" ? (
-            <AdminCategoryManager
-              categories={categories}
-              categoryForm={categoryForm}
-              onCategoryFormChange={setCategoryFormValue}
-              onCategorySubmit={handleSaveCategory}
-              onCategoryDelete={handleDeleteCategory}
-              categoryMessage={categoryMessage}
-              categoryError={categoryError}
-              busy={formBusy}
-            />
-          ) : null}
+              {activeTab === "manage" ? (
+                <AdminProductList products={adminProducts} onEdit={handleEditProduct} onDelete={handleDeleteProduct} busy={formBusy} />
+              ) : null}
 
-          {activeTab === "settings" ? (
-            <AdminStoreSettings
-              settingsForm={settingsForm}
-              onSettingsChange={setSettingsValue}
-              onSettingsSubmit={handleSaveSettings}
-              settingsMessage={settingsMessage}
-              settingsError={settingsError}
-              busy={formBusy}
-            />
-          ) : null}
+              {activeTab === "settings" ? (
+                <AdminStoreSettings
+                  settingsForm={settingsForm}
+                  onSettingsChange={setSettingsValue}
+                  onSettingsSubmit={handleSaveSettings}
+                  settingsMessage={settingsMessage}
+                  settingsError={settingsError}
+                  busy={formBusy}
+                />
+              ) : null}
+            </div>
+          </section>
         </>
       ) : null}
     </div>

@@ -4,18 +4,17 @@ export default function AdminAuthPanel({
   authForm,
   onAuthFormChange,
   onSignIn,
-  onSignUp,
   onLogout,
   authMessage,
   authError,
   busy
 }) {
   return (
-    <section className="card-surface p-6 md:p-7">
-      <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
+    <section className="card-surface p-4 sm:p-6 md:p-7">
+      <div className="mb-4 flex flex-wrap items-end justify-between gap-3 sm:mb-5">
         <div>
           <p className="text-xs font-bold uppercase tracking-[0.16em] text-cloud-700">Admin Portal</p>
-          <h1 className="sky-title mt-2 text-4xl">Upload and manage inventory</h1>
+          <h1 className="sky-title mt-2 text-2xl sm:text-4xl">Upload and manage inventory</h1>
         </div>
         {user && isAdmin ? (
           <button
@@ -38,7 +37,7 @@ export default function AdminAuthPanel({
 
       {!user || !isAdmin ? (
         <form
-          className="mt-5 grid gap-3 md:grid-cols-2"
+          className="mt-4 grid gap-3 md:mt-5 md:grid-cols-2"
           onSubmit={(event) => {
             event.preventDefault();
             onSignIn();
@@ -48,7 +47,7 @@ export default function AdminAuthPanel({
             value={authForm.email}
             onChange={(event) => onAuthFormChange("email", event.target.value)}
             type="email"
-            placeholder="Admin email"
+            placeholder="Admin email (must exist in admins collection)"
             className="rounded-2xl border border-cloud-200 bg-white px-4 py-3 text-sm focus:border-cloud-500 focus:outline-none"
             required
           />
@@ -64,17 +63,9 @@ export default function AdminAuthPanel({
           <button
             type="submit"
             disabled={busy}
-            className="rounded-2xl bg-cloud-500 px-5 py-3 text-sm font-bold text-white hover:bg-cloud-700 disabled:opacity-70"
+            className="rounded-2xl bg-cloud-500 px-5 py-3 text-sm font-bold text-white hover:bg-cloud-700 disabled:opacity-70 md:col-span-2 md:mx-auto md:w-72"
           >
             Sign In
-          </button>
-          <button
-            type="button"
-            onClick={onSignUp}
-            disabled={busy}
-            className="rounded-2xl border border-cloud-200 bg-white px-5 py-3 text-sm font-bold text-cloud-700 hover:border-cloud-400 disabled:opacity-70"
-          >
-            Sign Up Admin
           </button>
         </form>
       ) : null}

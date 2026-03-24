@@ -1,8 +1,12 @@
-﻿rules_version = '2';
+rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     function isSignedIn() {
       return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
     }
 
     function isAdmin() {
@@ -10,31 +14,163 @@ service cloud.firestore {
         exists(/databases/$(database)/documents/admins/$(request.auth.uid));
     }
 
+    function isString(value) {
+      return value is string;
+    }
+
+    function isOptionalString(value) {
+      return value == null || value is string;
+    }
+
+    function isNumber(value) {
+      return value is int || value is float;
+    }
+
+    function isOptionalNumber(value) {
+      return value == null || value is int || value is float;
+    }
+
+    function isBool(value) {
+      return value is bool;
+    }
+
+    function hasProductRequiredKeys(data) {
+      return data.keys().hasAll([
+        'name',
+        'slug',
+        'sizes',
+        'images',
+        'image',
+        'updatedAt'
+      ]);
+    }
+
+    function hasOnlyAllowedProductKeys(data) {
+      return data.keys().hasOnly([
+        'name',
+        'slug',
+        'price',
+        'featured',
+        'sizes',
+        'images',
+        'image',
+        'video',
+        'createdAt',
+        'updatedAt'
+      ]);
+    }
+
+    function isValidProduct(data) {
+      return hasProductRequiredKeys(data) &&
+        hasOnlyAllowedProductKeys(data) &&
+        isString(data.name) &&
+        isString(data.slug) &&
+        data.sizes is list &&
+        data.sizes.size() <= 30 &&
+        data.images is list &&
+        data.images.size() > 0 &&
+        data.images.size() <= 5 &&
+        isString(data.image) &&
+        data.image.size() > 0 &&
+        (!('price' in data) || isOptionalNumber(data.price)) &&
+        (!('featured' in data) || isBool(data.featured)) &&
+        (!('video' in data) || isOptionalString(data.video)) &&
+        data.updatedAt != null &&
+        (!('createdAt' in data) || data.createdAt != null);
+    }
+
+    function isValidCategory(data) {
+      return data.keys().hasAll(['name', 'slug', 'updatedAt']) &&
+        data.keys().hasOnly([
+          'name',
+          'slug',
+          'image',
+          'createdAt',
+          'updatedAt',
+          'updatedBy',
+          'updatedByEmail'
+        ]) &&
+        isString(data.name) &&
+        isString(data.slug) &&
+        (!('image' in data) || isOptionalString(data.image)) &&
+        (!('createdAt' in data) || data.createdAt != null) &&
+        data.updatedAt != null &&
+        (!('updatedBy' in data) || isOptionalString(data.updatedBy)) &&
+        (!('updatedByEmail' in data) || isOptionalString(data.updatedByEmail));
+    }
+
+    function isValidSettings(data) {
+      return data.keys().hasOnly([
+        'storeName',
+        'storeTagline',
+        'storeLogo',
+        'messengerLink',
+        'contactDetails',
+        'updatedAt',
+        'updatedBy',
+        'updatedByEmail'
+      ]) &&
+      (!('storeName' in data) || isOptionalString(data.storeName)) &&
+      (!('storeTagline' in data) || isOptionalString(data.storeTagline)) &&
+      (!('storeLogo' in data) || isOptionalString(data.storeLogo)) &&
+      (!('messengerLink' in data) || isOptionalString(data.messengerLink)) &&
+      (!('contactDetails' in data) || isOptionalString(data.contactDetails)) &&
+      (!('updatedAt' in data) || data.updatedAt != null) &&
+      (!('updatedBy' in data) || isOptionalString(data.updatedBy)) &&
+      (!('updatedByEmail' in data) || isOptionalString(data.updatedByEmail));
+    }
+
+    function isValidInventoryLog(data) {
+      return data.keys().hasOnly([
+        'adminUid',
+        'adminEmail',
+        'action',
+        'productId',
+        'productName',
+        'previousStock',
+        'currentStock',
+        'createdAt'
+      ]) &&
+      isString(data.adminUid) &&
+      isString(data.adminEmail) &&
+      isString(data.action) &&
+      isString(data.productId) &&
+      isString(data.productName) &&
+      isNumber(data.previousStock) &&
+      isNumber(data.currentStock) &&
+      data.createdAt != null;
+    }
+
     match /products/{productId} {
       allow read: if true;
-      allow create, update, delete: if isAdmin();
+      allow create: if isAdmin() && isValidProduct(request.resource.data);
+      allow update: if isAdmin() && isValidProduct(request.resource.data);
+      allow delete: if isAdmin();
     }
 
     match /categories/{categoryId} {
       allow read: if true;
-      allow create, update, delete: if isAdmin();
+      allow create: if isAdmin() && isValidCategory(request.resource.data);
+      allow update: if isAdmin() && isValidCategory(request.resource.data);
+      allow delete: if isAdmin();
     }
 
     match /settings/{settingId} {
       allow read: if true;
-      allow create, update, delete: if isAdmin();
+      allow create: if isAdmin() && isValidSettings(request.resource.data);
+      allow update: if isAdmin() && isValidSettings(request.resource.data);
+      allow delete: if false;
     }
 
     match /inventoryLogs/{logId} {
-      allow create: if isAdmin();
       allow read: if isAdmin();
+      allow create: if isAdmin() && isValidInventoryLog(request.resource.data);
       allow update, delete: if false;
     }
 
     match /admins/{uid} {
-      allow read: if isSignedIn() && request.auth.uid == uid;
-      allow create: if isSignedIn() &&
-        request.auth.uid == uid &&
+      allow read: if isOwner(uid) || isAdmin();
+      allow create: if isOwner(uid) &&
         !exists(/databases/$(database)/documents/admins/$(uid));
       allow update, delete: if false;
     }

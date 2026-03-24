@@ -3,44 +3,47 @@ import { SITE_CONFIG } from "../config/site";
 import { useProducts } from "../contexts/ProductsContext";
 
 const navLinkClass = ({ isActive }) =>
-  `rounded-full px-4 py-2 text-sm font-semibold transition ${
+  `rounded-full px-3 py-1.5 text-xs font-semibold transition sm:px-4 sm:py-2 sm:text-sm ${
     isActive
       ? "bg-cloud-500 text-white shadow"
-      : "text-cloud-900 hover:bg-white/70 hover:text-cloud-700"
+      : "text-cloud-900 hover:bg-white/80 hover:text-cloud-700"
   }`;
 
 export default function NavigationBar() {
   const { settings } = useProducts();
   const brandName = settings.storeName || SITE_CONFIG.brandName;
-  const brandTagline = settings.storeTagline || SITE_CONFIG.brandTagline;
+  const messengerUrl = settings.messengerLink || SITE_CONFIG.messengerUrl;
 
   return (
-    <header className="sticky top-0 z-50 border-b border-white/70 bg-white/70 backdrop-blur-xl">
-      <div className="mx-auto flex w-[min(1200px,94vw)] flex-wrap items-center justify-between gap-4 py-4">
-        <Link to="/" className="flex items-center gap-3">
+    <header className="sticky top-0 z-50 border-b border-white/70 bg-white/80 backdrop-blur-xl">
+      <div className="mx-auto flex w-[min(1240px,96vw)] items-center justify-between gap-2 py-2 sm:w-[min(1240px,95vw)] sm:py-3">
+        <Link to="/" className="flex min-w-0 items-center gap-2 sm:gap-3">
           {settings.storeLogo ? (
-            <img src={settings.storeLogo} alt={brandName} className="h-10 w-10 rounded-2xl object-cover" />
+            <img src={settings.storeLogo} alt={brandName} className="h-9 w-9 rounded-xl object-cover shadow sm:h-11 sm:w-11 sm:rounded-2xl" />
           ) : (
-            <div className="grid h-10 w-10 place-items-center rounded-2xl bg-cloud-500 text-lg font-black text-white">
+            <div className="grid h-8 w-8 place-items-center rounded-xl bg-cloud-500 text-sm font-black text-white shadow sm:h-11 sm:w-11 sm:rounded-2xl sm:text-lg">
               {brandName.charAt(0).toUpperCase()}
             </div>
           )}
-          <div>
-            <p className="sky-title text-xl">{brandName}</p>
-            <p className="text-xs font-medium text-cloud-700">{brandTagline}</p>
-          </div>
+          <p className="sky-title truncate text-base sm:text-xl">{brandName}</p>
         </Link>
 
-        <nav className="flex flex-wrap items-center gap-2">
+        <nav className="flex items-center gap-1 sm:gap-2">
           <NavLink to="/" className={navLinkClass}>
             Home
-          </NavLink>
-          <NavLink to="/shop" className={navLinkClass}>
-            Shop
           </NavLink>
           <NavLink to="/admin" className={navLinkClass}>
             Admin
           </NavLink>
+          <a
+            href={messengerUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex rounded-full border border-cloud-200 bg-white px-2.5 py-1.5 text-xs font-bold text-cloud-700 hover:border-cloud-400 sm:px-4 sm:py-2 sm:text-sm"
+          >
+            <span className="sm:hidden">M</span>
+            <span className="hidden sm:inline">Messenger</span>
+          </a>
         </nav>
       </div>
     </header>

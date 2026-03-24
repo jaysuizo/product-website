@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { collection, doc, onSnapshot, orderBy, query } from "firebase/firestore";
 import { DEFAULT_CATEGORIES, DEFAULT_STORE_SETTINGS } from "../config/site";
+import { DEMO_CATEGORIES, DEMO_PRODUCTS_RAW } from "../config/demoCatalog";
 import { db, missingFirebaseConfigKeys } from "../lib/firebaseClient";
 import { toSlug } from "../lib/format";
 import { normalizeProduct } from "../lib/productModel";
@@ -31,10 +32,12 @@ function normalizeSettings(raw = {}) {
 
 export function ProductsProvider({ children }) {
   const [products, setProducts] = useState([]);
+  const [liveProducts, setLiveProducts] = useState([]);
   const [categories, setCategories] = useState(DEFAULT_CATEGORIES);
   const [settings, setSettings] = useState(DEFAULT_STORE_SETTINGS);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [warning, setWarning] = useState("");
 
   useEffect(() => {
     if (missingFirebaseConfigKeys.length > 0) {
@@ -61,13 +64,18 @@ export function ProductsProvider({ children }) {
     const unsubscribeProducts = onSnapshot(
       productsQuery,
       (snapshot) => {
-        setProducts(snapshot.docs.map((docItem) => normalizeProduct(docItem.id, docItem.data())));
+        const docs = snapshot.docs.map((docItem) => normalizeProduct(docItem.id, docItem.data()));
+        setLiveProducts(docs);
+        setProducts(docs.length > 0 ? docs : DEMO_PRODUCTS_RAW.map((item) => normalizeProduct(item.id, item)));
         loadedProducts = true;
         setError("");
+        setWarning(docs.length > 0 ? "" : "Showing demo products while your live catalog is still empty.");
         finishLoading();
       },
       (snapshotError) => {
-        setError(snapshotError.message || "Unable to load products.");
+        setLiveProducts([]);
+        setProducts(DEMO_PRODUCTS_RAW.map((item) => normalizeProduct(item.id, item)));
+        setWarning(snapshotError.message || "Unable to load live products. Showing demo catalog.");
         loadedProducts = true;
         finishLoading();
       }
@@ -77,12 +85,12 @@ export function ProductsProvider({ children }) {
       categoriesQuery,
       (snapshot) => {
         const docs = snapshot.docs.map((docItem) => normalizeCategoryDoc(docItem.id, docItem.data()));
-        setCategories(docs.length > 0 ? docs : DEFAULT_CATEGORIES);
+        setCategories(docs.length > 0 ? docs : DEMO_CATEGORIES);
         loadedCategories = true;
         finishLoading();
       },
       () => {
-        setCategories(DEFAULT_CATEGORIES);
+        setCategories(DEMO_CATEGORIES);
         loadedCategories = true;
         finishLoading();
       }
@@ -112,12 +120,15 @@ export function ProductsProvider({ children }) {
   const value = useMemo(
     () => ({
       products,
+      liveProducts,
       categories,
       settings,
       loading,
-      error
+      error,
+      warning,
+      usingDemoData: liveProducts.length === 0 && products.length > 0
     }),
-    [products, categories, settings, loading, error]
+    [products, liveProducts, categories, settings, loading, error, warning]
   );
 
   return <ProductsContext.Provider value={value}>{children}</ProductsContext.Provider>;

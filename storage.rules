@@ -15,9 +15,20 @@ service firebase.storage {
         );
     }
 
+    function isValidImage() {
+      return request.resource != null &&
+        request.resource.size < 20 * 1024 * 1024 &&
+        request.resource.contentType.matches('image/.*');
+    }
+
     match /products/{productId}/{allPaths=**} {
       allow read: if true;
       allow write: if isAdmin() && isValidMedia();
+    }
+
+    match /settings/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAdmin() && isValidImage();
     }
 
     match /{allPaths=**} {
