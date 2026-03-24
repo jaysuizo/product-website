@@ -7,24 +7,29 @@ import {
 } from "firebase/auth";
 import { collection, doc, serverTimestamp } from "firebase/firestore";
 import AdminAuthPanel from "../components/admin/AdminAuthPanel";
+import AdminCategoryManager from "../components/admin/AdminCategoryManager";
 import AdminInventoryLogs from "../components/admin/AdminInventoryLogs";
 import AdminProductForm from "../components/admin/AdminProductForm";
 import AdminProductList from "../components/admin/AdminProductList";
-import { MAX_PRODUCT_MEDIA_BYTES } from "../config/site";
+import AdminStoreSettings from "../components/admin/AdminStoreSettings";
+import { DEFAULT_STORE_SETTINGS, MAX_PRODUCT_MEDIA_BYTES } from "../config/site";
 import { useProducts } from "../contexts/ProductsContext";
 import {
   createAdminRecord,
+  deleteCategoryRecord,
   deleteMediaFromStorage,
   deleteProductRecord,
   isUserAdmin,
+  saveCategoryRecord,
   saveProductRecord,
+  saveStoreSettings,
   subscribeInventoryLogs,
   uploadProductFiles,
   writeInventoryLog
 } from "../lib/adminApi";
 import { auth, db } from "../lib/firebaseClient";
-import { bytesToMbText, sumStock, toSlug } from "../lib/format";
-import { buildProductPayload, createEmptyProductForm } from "../lib/productModel";
+import { bytesToMbText, toSlug } from "../lib/format";
+import { buildProductPayload, createEmptyProductForm, getProductStock } from "../lib/productModel";
 
 function getFriendlyError(error) {
   const code = String(error?.code || "");
@@ -63,8 +68,25 @@ function sumSelectedFileBytes(files) {
   return files.reduce((total, file) => total + (Number(file?.size || 0) || 0), 0);
 }
 
+function getDraftTotalStock(draft) {
+  const variantList = Array.isArray(draft?.variants) ? draft.variants : [];
+
+  if (variantList.length > 0) {
+    return variantList.reduce((total, variant) => {
+      const amount = Number(variant?.stock || 0);
+      return total + (Number.isFinite(amount) ? Math.max(0, amount) : 0);
+    }, 0);
+  }
+
+  const inventory = Array.isArray(draft?.inventory) ? draft.inventory : [];
+  return inventory.reduce((total, row) => {
+    const amount = Number(row?.stock || 0);
+    return total + (Number.isFinite(amount) ? Math.max(0, amount) : 0);
+  }, 0);
+}
+
 export default function AdminPage() {
-  const { products } = useProducts();
+  const { products, categories, settings } = useProducts();
   const [authUser, setAuthUser] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [authBusy, setAuthBusy] = useState(false);
@@ -81,6 +103,47 @@ export default function AdminPage() {
   const [formBusy, setFormBusy] = useState(false);
   const [formMessage, setFormMessage] = useState("");
   const [formError, setFormError] = useState(false);
+
+  const [categoryForm, setCategoryForm] = useState({ name: "", image: "" });
+  const [categoryMessage, setCategoryMessage] = useState("");
+  const [categoryError, setCategoryError] = useState(false);
+
+  const [settingsForm, setSettingsForm] = useState(DEFAULT_STORE_SETTINGS);
+  const [settingsMessage, setSettingsMessage] = useState("");
+  const [settingsError, setSettingsError] = useState(false);
+
+  useEffect(() => {
+    setSettingsForm({
+      storeName: settings.storeName,
+      storeTagline: settings.storeTagline,
+      storeLogo: settings.storeLogo,
+      messengerLink: settings.messengerLink,
+      contactDetails: settings.contactDetails
+    });
+  }, [settings]);
+
+  useEffect(() => {
+    if (!categories.length) {
+      return;
+    }
+
+    setForm((current) => {
+      if (current.id) {
+        return current;
+      }
+
+      const matchedCategory = categories.find((category) => category.slug === current.category);
+      if (matchedCategory) {
+        return current;
+      }
+
+      return {
+        ...current,
+        category: categories[0].slug,
+        categoryLabel: categories[0].name
+      };
+    });
+  }, [categories]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -129,7 +192,14 @@ export default function AdminPage() {
   const adminProducts = useMemo(() => products, [products]);
 
   function resetFormState() {
-    setForm(createEmptyProductForm());
+    const defaultCategory = categories[0]?.slug || "uncategorized";
+    const defaultCategoryLabel = categories[0]?.name || "Uncategorized";
+    setForm({
+      ...createEmptyProductForm(),
+      category: defaultCategory,
+      categoryLabel: defaultCategoryLabel,
+      messengerLink: settings.messengerLink || createEmptyProductForm().messengerLink
+    });
     setSelectedFiles([]);
     setRemovedMediaKeys(new Set());
   }
@@ -187,13 +257,17 @@ export default function AdminPage() {
       name: product.name,
       slug: product.slug,
       category: product.category,
+      categoryLabel: product.categoryLabel || product.category,
+      brand: product.brand || "",
+      status: product.status || "active",
       shortDescription: product.shortDescription,
       fullDescription: product.fullDescription,
+      mainImage: product.mainImage || product.featuredImage,
       featuredImage: product.featuredImage,
       galleryImages: [...product.galleryImages],
       variants: product.variants.length
-        ? product.variants.map((variant) => ({ ...variant }))
-        : [{ id: "variant-1", name: "Default", label: "Default", colorHex: "", previewImage: "" }],
+        ? product.variants.map((variant) => ({ ...variant, priceOverride: variant.priceOverride ?? "" }))
+        : [{ id: "variant-1", type: "design", value: "default", label: "Default", image: "", stock: 0, sku: "", priceOverride: "", colorHex: "" }],
       videoUrl: product.videoUrl,
       messengerLink: product.messengerLink,
       featured: product.featured,
@@ -246,7 +320,7 @@ export default function AdminPage() {
         action: "deleted",
         productId: product.id,
         productName: product.name,
-        previousStock: sumStock(product.inventory),
+        previousStock: getProductStock(product),
         currentStock: 0
       });
 
@@ -286,6 +360,11 @@ export default function AdminPage() {
         throw new Error("Full description is required.");
       }
 
+      const selectedCategory = categories.find((category) => category.slug === form.category);
+      if (!selectedCategory) {
+        throw new Error("Choose a valid category.");
+      }
+
       const inventory = form.inventory
         .map((row) => ({
           size: String(row.size || "").trim(),
@@ -293,12 +372,29 @@ export default function AdminPage() {
         }))
         .filter((row) => row.size);
 
-      if (inventory.length === 0) {
-        throw new Error("Add at least one size and stock row.");
+      const variants = form.variants
+        .map((variant, index) => {
+          const parsedPriceOverride = Number.parseFloat(String(variant.priceOverride ?? ""));
+
+          return {
+            id: variant.id || `variant-${index + 1}`,
+            type: String(variant.type || "design").trim().toLowerCase() || "design",
+            value: String(variant.value || toSlug(variant.label || `option-${index + 1}`)).trim(),
+            label: String(variant.label || "").trim(),
+            image: String(variant.image || variant.previewImage || "").trim(),
+            colorHex: String(variant.colorHex || "").trim(),
+            stock: Math.max(0, Number.parseInt(String(variant.stock || 0), 10) || 0),
+            sku: String(variant.sku || "").trim(),
+            priceOverride: Number.isFinite(parsedPriceOverride) ? parsedPriceOverride : null
+          };
+        })
+        .filter((variant) => variant.label);
+
+      if (variants.length === 0) {
+        throw new Error("Add at least one variant option.");
       }
 
       const productId = form.id || doc(collection(db, "products")).id;
-
       const keptMedia = (form.media || []).filter((item) => !removedMediaKeys.has(getMediaKey(item)));
       const existingBytes = sumMediaBytes(keptMedia);
       const selectedBytes = sumSelectedFileBytes(selectedFiles);
@@ -316,25 +412,9 @@ export default function AdminPage() {
       const imageUrls = nextMedia.filter((item) => item.type === "image").map((item) => item.url);
       const videoUrls = nextMedia.filter((item) => item.type === "video").map((item) => item.url);
 
-      const galleryImages = [form.featuredImage, ...form.galleryImages, ...imageUrls]
+      const galleryImages = [form.mainImage, form.featuredImage, ...form.galleryImages, ...imageUrls]
         .map((entry) => String(entry || "").trim())
         .filter(Boolean);
-
-      const videoUrl = String(form.videoUrl || videoUrls[0] || "").trim();
-
-      const variants = form.variants
-        .map((variant, index) => ({
-          id: variant.id || `variant-${index + 1}`,
-          name: String(variant.name || `Variant ${index + 1}`).trim(),
-          label: String(variant.label || "").trim(),
-          colorHex: String(variant.colorHex || "").trim(),
-          previewImage: String(variant.previewImage || galleryImages[0] || "").trim()
-        }))
-        .filter((variant) => variant.label);
-
-      if (variants.length === 0) {
-        throw new Error("Add at least one variant label.");
-      }
 
       const parsedPrice = Number.parseFloat(String(form.price || ""));
       const price = Number.isFinite(parsedPrice) && parsedPrice >= 0 ? parsedPrice : null;
@@ -344,22 +424,27 @@ export default function AdminPage() {
           ...form,
           slug: toSlug(form.slug || name),
           name,
+          category: selectedCategory.slug,
+          categoryLabel: selectedCategory.name,
           fullDescription,
           shortDescription: form.shortDescription.trim(),
-          featuredImage: String(form.featuredImage || galleryImages[0] || "").trim(),
+          mainImage: String(form.mainImage || galleryImages[0] || "").trim(),
+          featuredImage: String(form.mainImage || galleryImages[0] || "").trim(),
           galleryImages,
           variants,
-          videoUrl,
-          messengerLink: String(form.messengerLink || "").trim(),
+          videoUrl: String(form.videoUrl || videoUrls[0] || "").trim(),
+          messengerLink: String(form.messengerLink || settings.messengerLink || "").trim(),
           inventory,
           price,
-          media: nextMedia
+          media: nextMedia,
+          status: form.status,
+          brand: form.brand
         },
         { fallbackId: productId }
       );
 
-      const oldStock = sumStock(form.inventory);
-      const newStock = sumStock(inventory);
+      const oldStock = getDraftTotalStock(form);
+      const newStock = getDraftTotalStock({ variants, inventory });
 
       const savePayload = {
         ...payload,
@@ -402,6 +487,102 @@ export default function AdminPage() {
     }
   }
 
+  function setCategoryFormValue(key, value) {
+    setCategoryForm((current) => ({ ...current, [key]: value }));
+  }
+
+  async function handleSaveCategory() {
+    if (!authUser || !isAdmin) {
+      return;
+    }
+
+    setCategoryMessage("");
+    setCategoryError(false);
+
+    try {
+      const name = categoryForm.name.trim();
+      if (!name) {
+        throw new Error("Category name is required.");
+      }
+
+      const slug = toSlug(name);
+      await saveCategoryRecord(slug, {
+        name,
+        slug,
+        image: String(categoryForm.image || "").trim(),
+        createdAt: serverTimestamp(),
+        updatedBy: authUser.uid,
+        updatedByEmail: authUser.email || ""
+      });
+
+      setCategoryForm({ name: "", image: "" });
+      setCategoryMessage("Category saved.");
+      setCategoryError(false);
+    } catch (error) {
+      setCategoryMessage(getFriendlyError(error));
+      setCategoryError(true);
+    }
+  }
+
+  async function handleDeleteCategory(category) {
+    if (!authUser || !isAdmin) {
+      return;
+    }
+
+    const productsUsingCategory = products.filter((product) => product.category === category.slug).length;
+
+    if (productsUsingCategory > 0) {
+      setCategoryMessage(`Cannot delete ${category.name}. ${productsUsingCategory} product(s) still use this category.`);
+      setCategoryError(true);
+      return;
+    }
+
+    const confirmed = window.confirm(`Delete category \"${category.name}\"?`);
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      await deleteCategoryRecord(category.id);
+      setCategoryMessage("Category deleted.");
+      setCategoryError(false);
+    } catch (error) {
+      setCategoryMessage(getFriendlyError(error));
+      setCategoryError(true);
+    }
+  }
+
+  function setSettingsValue(key, value) {
+    setSettingsForm((current) => ({ ...current, [key]: value }));
+  }
+
+  async function handleSaveSettings() {
+    if (!authUser || !isAdmin) {
+      return;
+    }
+
+    setSettingsMessage("");
+    setSettingsError(false);
+
+    try {
+      await saveStoreSettings({
+        storeName: String(settingsForm.storeName || "").trim(),
+        storeTagline: String(settingsForm.storeTagline || "").trim(),
+        storeLogo: String(settingsForm.storeLogo || "").trim(),
+        messengerLink: String(settingsForm.messengerLink || "").trim(),
+        contactDetails: String(settingsForm.contactDetails || "").trim(),
+        updatedBy: authUser.uid,
+        updatedByEmail: authUser.email || ""
+      });
+
+      setSettingsMessage("Store settings updated.");
+      setSettingsError(false);
+    } catch (error) {
+      setSettingsMessage(getFriendlyError(error));
+      setSettingsError(true);
+    }
+  }
+
   const tabButtonClass = (tab) =>
     `rounded-full px-4 py-2 text-sm font-bold transition ${
       activeTab === tab
@@ -429,7 +610,10 @@ export default function AdminPage() {
           <section className="card-surface p-4">
             <div className="flex flex-wrap gap-2">
               <button type="button" onClick={() => setActiveTab("form")} className={tabButtonClass("form")}>
-                Upload / Edit Product
+                Product Form
+              </button>
+              <button type="button" onClick={() => setActiveTab("manage")} className={tabButtonClass("manage")}>
+                Manage Products
               </button>
               <button
                 type="button"
@@ -438,8 +622,19 @@ export default function AdminPage() {
               >
                 Inventory Logs
               </button>
-              <button type="button" onClick={() => setActiveTab("manage")} className={tabButtonClass("manage")}>
-                Manage Products
+              <button
+                type="button"
+                onClick={() => setActiveTab("categories")}
+                className={tabButtonClass("categories")}
+              >
+                Categories
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab("settings")}
+                className={tabButtonClass("settings")}
+              >
+                Store Settings
               </button>
             </div>
           </section>
@@ -448,6 +643,7 @@ export default function AdminPage() {
             <AdminProductForm
               form={form}
               setForm={setForm}
+              categories={categories}
               selectedFiles={selectedFiles}
               setSelectedFiles={setSelectedFiles}
               removedMediaKeys={removedMediaKeys}
@@ -475,6 +671,30 @@ export default function AdminPage() {
           ) : null}
 
           {activeTab === "inventory" ? <AdminInventoryLogs logs={logs} /> : null}
+
+          {activeTab === "categories" ? (
+            <AdminCategoryManager
+              categories={categories}
+              categoryForm={categoryForm}
+              onCategoryFormChange={setCategoryFormValue}
+              onCategorySubmit={handleSaveCategory}
+              onCategoryDelete={handleDeleteCategory}
+              categoryMessage={categoryMessage}
+              categoryError={categoryError}
+              busy={formBusy}
+            />
+          ) : null}
+
+          {activeTab === "settings" ? (
+            <AdminStoreSettings
+              settingsForm={settingsForm}
+              onSettingsChange={setSettingsValue}
+              onSettingsSubmit={handleSaveSettings}
+              settingsMessage={settingsMessage}
+              settingsError={settingsError}
+              busy={formBusy}
+            />
+          ) : null}
         </>
       ) : null}
     </div>

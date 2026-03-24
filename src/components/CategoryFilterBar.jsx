@@ -1,9 +1,9 @@
-import { CATEGORY_OPTIONS } from "../config/site";
+export default function CategoryFilterBar({ activeCategory, onCategoryChange, categories = [] }) {
+  const options = [{ id: "all", name: "All" }, ...categories];
 
-export default function CategoryFilterBar({ activeCategory, onCategoryChange }) {
   return (
     <div className="mb-5 flex flex-wrap gap-2">
-      {CATEGORY_OPTIONS.map((category) => (
+      {options.map((category) => (
         <button
           key={category.id}
           type="button"
@@ -14,7 +14,7 @@ export default function CategoryFilterBar({ activeCategory, onCategoryChange }) 
               : "border border-cloud-200 bg-white text-cloud-700 hover:border-cloud-300"
           }`}
         >
-          {category.label}
+          {category.name}
         </button>
       ))}
     </div>

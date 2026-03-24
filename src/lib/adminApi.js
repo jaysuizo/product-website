@@ -4,7 +4,6 @@ import {
   deleteDoc,
   doc,
   getDoc,
-  getDocs,
   limit,
   onSnapshot,
   orderBy,
@@ -128,8 +127,28 @@ export function subscribeInventoryLogs(onNext, onError) {
   );
 }
 
-export async function getProductsOnce() {
-  const productsQuery = query(collection(db, "products"), orderBy("updatedAt", "desc"));
-  const snapshot = await getDocs(productsQuery);
-  return snapshot.docs.map((docItem) => ({ id: docItem.id, ...docItem.data() }));
+export async function saveCategoryRecord(categoryId, payload) {
+  await setDoc(
+    doc(db, "categories", categoryId),
+    {
+      ...payload,
+      updatedAt: serverTimestamp()
+    },
+    { merge: true }
+  );
+}
+
+export async function deleteCategoryRecord(categoryId) {
+  await deleteDoc(doc(db, "categories", categoryId));
+}
+
+export async function saveStoreSettings(payload) {
+  await setDoc(
+    doc(db, "settings", "store"),
+    {
+      ...payload,
+      updatedAt: serverTimestamp()
+    },
+    { merge: true }
+  );
 }

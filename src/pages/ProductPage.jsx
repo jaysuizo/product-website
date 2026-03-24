@@ -8,12 +8,13 @@ import ProductInquiryButton from "../components/ProductInquiryButton";
 import ProductVideo from "../components/ProductVideo";
 import ProductGrid from "../components/ProductGrid";
 import VariantSelector from "../components/VariantSelector";
-import { formatCurrency, sumStock } from "../lib/format";
+import { formatCurrency } from "../lib/format";
+import { getProductStock, getVariantStock } from "../lib/productModel";
 import { SITE_CONFIG } from "../config/site";
 
 export default function ProductPage() {
   const { slug } = useParams();
-  const { products, loading, error } = useProducts();
+  const { products, settings, loading, error } = useProducts();
 
   const product = useMemo(() => {
     return products.find((item) => item.slug === slug || item.id === slug);
@@ -22,28 +23,42 @@ export default function ProductPage() {
   const [selectedVariantId, setSelectedVariantId] = useState("");
   const [activeImage, setActiveImage] = useState("");
 
+  const selectedVariant = useMemo(() => {
+    if (!product || !selectedVariantId) {
+      return null;
+    }
+
+    return product.variants.find((variant) => variant.id === selectedVariantId) || null;
+  }, [product, selectedVariantId]);
+
   useEffect(() => {
     if (!product) {
       return;
     }
 
-    const defaultVariant = product.variants[0];
-    const defaultImage = defaultVariant?.previewImage || product.featuredImage || product.galleryImages[0] || "";
+    const preferredVariant = product.variants.find((variant) => getVariantStock(variant) > 0) || product.variants[0];
+    const defaultImage =
+      preferredVariant?.image ||
+      preferredVariant?.previewImage ||
+      product.mainImage ||
+      product.featuredImage ||
+      product.galleryImages[0] ||
+      "";
 
-    setSelectedVariantId(defaultVariant?.id || "");
+    setSelectedVariantId(preferredVariant?.id || "");
     setActiveImage(defaultImage);
   }, [product]);
 
   useEffect(() => {
-    if (!product || !selectedVariantId) {
+    if (!selectedVariant) {
       return;
     }
 
-    const selectedVariant = product.variants.find((variant) => variant.id === selectedVariantId);
-    if (selectedVariant?.previewImage) {
-      setActiveImage(selectedVariant.previewImage);
+    const image = selectedVariant.image || selectedVariant.previewImage;
+    if (image) {
+      setActiveImage(image);
     }
-  }, [selectedVariantId, product]);
+  }, [selectedVariant]);
 
   if (loading) {
     return <LoadingState label="Loading product details..." />;
@@ -62,11 +77,16 @@ export default function ProductPage() {
     );
   }
 
-  const inquiryLink = product.messengerLink || SITE_CONFIG.messengerUrl;
+  const inquiryLink = product.messengerLink || settings.messengerLink || SITE_CONFIG.messengerUrl;
   const related = products
-    .filter((item) => item.id !== product.id && item.category === product.category)
+    .filter((item) => item.id !== product.id && item.category === product.category && item.status !== "inactive")
     .slice(0, 4);
-  const stock = sumStock(product.inventory);
+
+  const totalStock = getProductStock(product);
+  const variantStock = selectedVariant ? getVariantStock(selectedVariant) : totalStock;
+  const displayPrice = Number.isFinite(Number(selectedVariant?.priceOverride))
+    ? Number(selectedVariant.priceOverride)
+    : product.price;
 
   return (
     <div className="space-y-8">
@@ -89,13 +109,15 @@ export default function ProductPage() {
         <article className="card-surface space-y-6 p-6">
           <div>
             <p className="mb-2 inline-flex rounded-full bg-cloud-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.14em] text-cloud-700">
-              {product.category}
+              {product.categoryLabel || product.category}
             </p>
             <h1 className="sky-title text-4xl">{product.name}</h1>
+            {product.brand ? <p className="mt-1 text-sm font-semibold text-slate-500">Brand: {product.brand}</p> : null}
             <p className="mt-3 text-slate-600">{product.shortDescription || product.fullDescription}</p>
             <div className="mt-4 flex flex-wrap gap-4 text-sm font-semibold text-slate-600">
-              <span>{stock} in stock</span>
-              {product.price ? <span>{formatCurrency(product.price)}</span> : null}
+              <span>Total stock: {totalStock}</span>
+              <span>Selected variant: {variantStock}</span>
+              {displayPrice ? <span>{formatCurrency(displayPrice)}</span> : null}
             </div>
           </div>
 
@@ -112,7 +134,7 @@ export default function ProductPage() {
 
           {product.inventory.length > 0 ? (
             <div>
-              <p className="text-sm font-semibold uppercase tracking-wide text-slate-500">Inventory</p>
+              <p className="text-sm font-semibold uppercase tracking-wide text-slate-500">Size Inventory</p>
               <div className="mt-2 flex flex-wrap gap-2">
                 {product.inventory.map((row) => (
                   <span key={`${row.size}-${row.stock}`} className="rounded-full border border-cloud-200 bg-white px-3 py-1 text-xs font-semibold text-cloud-700">
@@ -124,7 +146,10 @@ export default function ProductPage() {
           ) : null}
 
           <div className="flex flex-wrap gap-3">
-            <ProductInquiryButton href={inquiryLink} label="Message on Messenger" />
+            <ProductInquiryButton
+              href={inquiryLink}
+              label={variantStock <= 0 ? "Ask availability on Messenger" : "Message on Messenger"}
+            />
             <Link
               to="/shop"
               className="inline-flex items-center justify-center rounded-2xl border border-cloud-200 bg-white px-6 py-3 text-sm font-bold text-cloud-700 hover:border-cloud-400"

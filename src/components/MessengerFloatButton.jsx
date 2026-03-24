@@ -1,7 +1,9 @@
 import { SITE_CONFIG } from "../config/site";
+import { useProducts } from "../contexts/ProductsContext";
 
 export default function MessengerFloatButton({ href }) {
-  const messengerUrl = href || SITE_CONFIG.messengerUrl;
+  const { settings } = useProducts();
+  const messengerUrl = href || settings.messengerLink || SITE_CONFIG.messengerUrl;
 
   return (
     <a

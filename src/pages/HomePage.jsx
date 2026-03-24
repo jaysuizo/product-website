@@ -6,14 +6,15 @@ import LoadingState from "../components/LoadingState";
 import EmptyState from "../components/EmptyState";
 
 export default function HomePage() {
-  const { products, loading, error } = useProducts();
+  const { products, categories, settings, loading, error } = useProducts();
 
-  const featuredProducts = products.filter((product) => product.featured).slice(0, 8);
+  const featuredProducts = products.filter((product) => product.featured && product.status !== "inactive").slice(0, 8);
   const showcaseProducts = featuredProducts.length > 0 ? featuredProducts : products.slice(0, 8);
 
-  const categoryStats = ["fashion", "beauty", "gadgets", "home", "sports"].map((category) => ({
-    category,
-    count: products.filter((product) => product.category === category).length
+  const categoryStats = categories.map((category) => ({
+    category: category.slug,
+    name: category.name,
+    count: products.filter((product) => product.category === category.slug).length
   }));
 
   return (
@@ -25,13 +26,13 @@ export default function HomePage() {
         <div className="relative grid gap-8 md:grid-cols-[1.2fr_1fr] md:items-end">
           <div>
             <p className="mb-3 inline-flex rounded-full bg-cloud-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] text-cloud-700">
-              Fresh drop collection
+              Live catalog system
             </p>
             <h1 className="sky-title max-w-2xl text-4xl leading-tight md:text-5xl">
-              Discover products quickly, compare variants, and inquire in one tap.
+              {settings.storeName || "MyStore"} dynamic product browsing with modern Shopee-like UX.
             </h1>
             <p className="mt-5 max-w-xl text-slate-600">
-              A cleaner Shopee-style browsing flow focused on showcasing your products. No cluttered checkout, just high-conversion product discovery.
+              Search, filter, compare variants, and contact seller instantly via Messenger. Inventory and products are fully managed from the admin dashboard.
             </p>
 
             <div className="mt-7 flex flex-wrap gap-3">
@@ -57,8 +58,8 @@ export default function HomePage() {
               <p className="mt-2 text-3xl font-black text-cloud-900">{featuredProducts.length}</p>
             </article>
             <article className="rounded-2xl border border-white/70 bg-white/85 p-4 sm:col-span-2">
-              <p className="text-sm font-semibold text-slate-500">No checkout flow</p>
-              <p className="mt-2 text-lg font-extrabold text-cloud-700">All purchase intent goes to Messenger inquiry</p>
+              <p className="text-sm font-semibold text-slate-500">Contact flow</p>
+              <p className="mt-2 text-lg font-extrabold text-cloud-700">Messenger-first inquiries, no checkout</p>
             </article>
           </div>
         </div>
@@ -67,7 +68,7 @@ export default function HomePage() {
       <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         {categoryStats.map((item) => (
           <article key={item.category} className="card-surface p-4 text-center">
-            <p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">{item.category}</p>
+            <p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">{item.name}</p>
             <p className="mt-2 text-2xl font-black text-cloud-900">{item.count}</p>
           </article>
         ))}
@@ -76,7 +77,7 @@ export default function HomePage() {
       <section>
         <SectionHeading
           title="Featured Products"
-          description="Click any card to open the full product page with gallery, variants, and video preview."
+          description="Open product pages to view gallery, stock-aware variants, videos, and Messenger inquiry CTA."
           rightSlot={
             <Link to="/shop" className="text-sm font-bold text-cloud-700 hover:text-cloud-900">
               View full catalog &rarr;
@@ -102,19 +103,19 @@ export default function HomePage() {
 
       <section className="grid gap-4 md:grid-cols-3">
         <article className="card-surface p-6">
-          <p className="text-xs font-bold uppercase tracking-[0.14em] text-cloud-700">Fast browsing</p>
-          <h3 className="sky-title mt-2 text-2xl">Smart category flow</h3>
-          <p className="mt-3 text-sm text-slate-600">Filter by category and variant style to help visitors find products faster.</p>
+          <p className="text-xs font-bold uppercase tracking-[0.14em] text-cloud-700">Dynamic inventory</p>
+          <h3 className="sky-title mt-2 text-2xl">Stock-aware variants</h3>
+          <p className="mt-3 text-sm text-slate-600">Each variant has its own stock so customers can only select valid options.</p>
         </article>
         <article className="card-surface p-6">
-          <p className="text-xs font-bold uppercase tracking-[0.14em] text-cloud-700">Variant preview</p>
-          <h3 className="sky-title mt-2 text-2xl">Design focused product pages</h3>
-          <p className="mt-3 text-sm text-slate-600">Each product detail screen lets users switch variants and instantly preview selected design.</p>
+          <p className="text-xs font-bold uppercase tracking-[0.14em] text-cloud-700">Admin workflow</p>
+          <h3 className="sky-title mt-2 text-2xl">Fast CRUD management</h3>
+          <p className="mt-3 text-sm text-slate-600">Add/edit/delete products, update categories, and manage inventory logs from one dashboard.</p>
         </article>
         <article className="card-surface p-6">
-          <p className="text-xs font-bold uppercase tracking-[0.14em] text-cloud-700">Direct contact</p>
-          <h3 className="sky-title mt-2 text-2xl">Messenger inquiries</h3>
-          <p className="mt-3 text-sm text-slate-600">Floating Messenger CTA appears across the site for quick customer contact and conversion.</p>
+          <p className="text-xs font-bold uppercase tracking-[0.14em] text-cloud-700">Messenger funnel</p>
+          <h3 className="sky-title mt-2 text-2xl">Contact seller instantly</h3>
+          <p className="mt-3 text-sm text-slate-600">Replace checkout complexity with direct Messenger inquiries for faster conversions.</p>
         </article>
       </section>
     </div>

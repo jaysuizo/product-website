@@ -1,35 +1,45 @@
-# MyStore Product Showcase (React + Firebase)
+# MyStore Dynamic Catalog (React + Tailwind + Firebase)
 
-Modern, conversion-focused e-commerce showcase inspired by Shopee browsing patterns, redesigned for cleaner UX and premium presentation.
+Production-ready Shopee-inspired catalog system with dynamic products, variant inventory, admin dashboard, and Messenger-first inquiry flow.
 
-## What This Version Includes
+## What Was Reused vs Refactored
 
-- Modern homepage with hero, featured products, and category overview
-- Dedicated shop page with search + category + variant filters
-- Product detail page with:
-  - image gallery + thumbnails
-  - variant selector (color/design)
-  - instant variant preview image update
-  - responsive product video (YouTube/Vimeo/Storage)
-  - Messenger CTA
-- Floating Messenger button across all pages
-- No cart / no checkout / no payment flow
-- Admin portal with Firebase Auth (Email/Password):
-  - Sign in / Sign up admin
-  - Add / edit / delete products
-  - Upload multiple images and video
-  - 20 MB total media limit per product (app-level validation)
-  - Size + stock inventory input
+- Reused: Firebase project wiring, Spark-plan compatible architecture, auth/inventory foundations.
+- Refactored: UI system, routing, product model, admin UX, category/settings management, variant-level stock behavior, storefront filtering/sorting.
+- Removed: cart/checkout/payment flow.
+
+## Core Features
+
+- Public storefront
+  - Home page with hero, featured products, categories
+  - Shop page with dynamic products from Firestore
+  - Search, category filter, variant filter, availability filter, max-price filter
+  - Sorting + load-more pagination
+  - Product details by slug with gallery, stock-aware variants, related products, video support
+- Admin dashboard
+  - Firebase Auth sign in/sign up for admin
+  - Product CRUD
+  - Category management
+  - Store settings management (store name, logo, Messenger link, contact details)
+  - Variant inventory management (type/value/label/image/stock/SKU/price override)
+  - Media upload (images/videos) with 20MB cap per product
   - Inventory logs
-- Firebase Hosting compatible (Spark plan)
-- GitHub Actions workflow for Firebase deploy
+- Messenger integration
+  - Floating Messenger button site-wide
+  - Messenger CTA on product detail
+- No checkout/payment
+  - Inquiry flow only
 
 ## Stack
 
 - React + Vite
 - Tailwind CSS
-- Firebase Auth, Firestore, Storage
-- Firebase Hosting (Spark-safe)
+- Firebase Auth
+- Firestore
+- Firebase Storage
+- Firebase Hosting
+
+All compatible with Firebase Spark Plan.
 
 ## Project Structure
 
@@ -40,9 +50,11 @@ Modern, conversion-focused e-commerce showcase inspired by Shopee browsing patte
 |  |- components/
 |  |  |- admin/
 |  |  |  |- AdminAuthPanel.jsx
+|  |  |  |- AdminCategoryManager.jsx
 |  |  |  |- AdminInventoryLogs.jsx
 |  |  |  |- AdminProductForm.jsx
 |  |  |  |- AdminProductList.jsx
+|  |  |  |- AdminStoreSettings.jsx
 |  |  |- AppLayout.jsx
 |  |  |- CategoryFilterBar.jsx
 |  |  |- Footer.jsx
@@ -55,6 +67,7 @@ Modern, conversion-focused e-commerce showcase inspired by Shopee browsing patte
 |  |  |- ProductInquiryButton.jsx
 |  |  |- ProductVideo.jsx
 |  |  |- SectionHeading.jsx
+|  |  |- VariantSelector.jsx
 |  |- config/
 |  |  |- firebase.js
 |  |  |- site.js
@@ -82,62 +95,83 @@ Modern, conversion-focused e-commerce showcase inspired by Shopee browsing patte
 |- package.json
 ```
 
-## Product Data Model
+## Firestore Schema
 
-Products are normalized to this shape in code:
+### `settings/store`
+- `storeName`
+- `storeTagline`
+- `storeLogo`
+- `messengerLink`
+- `contactDetails`
+- `updatedAt`
 
-- `id`
+### `categories/{categorySlug}`
+- `name`
+- `slug`
+- `image`
+- `createdAt`
+- `updatedAt`
+
+### `products/{productId}`
 - `slug`
 - `name`
 - `shortDescription`
 - `fullDescription`
 - `category`
-- `featuredImage`
-- `galleryImages[]`
-- `variants[]`
-  - `id`
-  - `name`
-  - `label`
-  - `colorHex`
-  - `previewImage`
-- `videoUrl`
-- `messengerLink`
-- `featured`
+- `categoryLabel`
+- `brand`
 - `price` (optional)
-- `inventory[]` (`size`, `stock`)
-- `media[]` (uploaded image/video references)
+- `featured`
+- `status` (`active`/`inactive`)
+- `mainImage`
+- `galleryImages[]`
+- `videoUrl`
+- `variants[]`
+  - `type` (`color|size|design|style`)
+  - `value`
+  - `label`
+  - `image`
+  - `stock`
+  - `sku` (optional)
+  - `priceOverride` (optional)
+  - `colorHex` (optional)
+- `inventory[]` (optional extra size-stock rows)
+- `media[]` (storage metadata)
+- `createdAt`
+- `updatedAt`
 
-Backward compatibility is included for legacy docs using `description`, `sizes`, `flashSale`, and old `media` arrays.
+### `inventoryLogs/{logId}`
+- `action`
+- `productId`
+- `productName`
+- `previousStock`
+- `currentStock`
+- `adminUid`
+- `adminEmail`
+- `createdAt`
 
 ## Firebase Setup (Spark Plan)
 
-1. Open Firebase Console for project `my-store-website-5ec32`.
-2. Enable Authentication -> Sign-in method -> Email/Password.
-3. Enable Firestore Database.
-4. Enable Storage.
-5. Deploy rules:
+1. Enable Authentication -> Email/Password.
+2. Enable Firestore.
+3. Enable Storage.
+4. Deploy rules:
 
 ```powershell
 firebase deploy --only firestore:rules,storage
 ```
 
-6. Authorized domains for Auth:
-- Add your local/dev domain (`localhost` already default)
-- Add your final domain (Firebase Hosting domain and/or custom domain)
+5. Add authorized domains in Firebase Auth settings (localhost + your live domain).
 
-## Local Setup
+## Local Run
 
 ```powershell
-npm install
+npm.cmd install
 copy .env.example .env.local
-npm run dev
+npm.cmd run dev
 ```
 
-Then open the local URL shown by Vite (usually `http://localhost:5173`).
-
-## Environment Variables
-
-Use `.env.local`:
+## Env Variables
 
 ```env
 VITE_FIREBASE_API_KEY=...
@@ -149,76 +183,51 @@ VITE_FIREBASE_APP_ID=...
 VITE_MESSENGER_URL=https://m.me/YOUR_USERNAME
 ```
 
-`VITE_MESSENGER_URL` is the global Messenger fallback URL.
+## Build and Deploy
 
-## Build
-
-```powershell
-npm run build
-npm run preview
-```
-
-## Manual Firebase Hosting Deploy
+### Build
 
 ```powershell
-npm run build
-firebase deploy --only hosting
+npm.cmd run build
+npm.cmd run preview
 ```
 
-## Deploy Through GitHub Actions (Firebase Hosting)
-
-Workflow file: `.github/workflows/firebase-hosting.yml`
-
-In GitHub repo -> Settings -> Secrets and variables -> Actions, add:
-
-- `FIREBASE_PROJECT_ID` = `my-store-website-5ec32`
-- `FIREBASE_SERVICE_ACCOUNT` = service account JSON content
-
-Create service account JSON with:
+### Manual Firebase Hosting Deploy
 
 ```powershell
-firebase login
-firebase projects:list
-firebase init hosting
-firebase serviceaccounts:keys:create service-account.json --iam-account <generated-service-account-email>
+npm.cmd run build
+npx.cmd firebase deploy --only hosting
 ```
 
-Copy JSON content into `FIREBASE_SERVICE_ACCOUNT` secret.
+### GitHub Actions Deploy
 
-Every push to `main` will build and deploy.
+Workflow: `.github/workflows/firebase-hosting.yml`
 
-## How To Update Store Content Later
+Set GitHub repo secrets:
+- `FIREBASE_PROJECT_ID`
+- `FIREBASE_SERVICE_ACCOUNT`
 
-### Update Messenger link globally
+Then push to `main`.
 
-- Edit `VITE_MESSENGER_URL` in `.env.local`.
+## Updating Content Later (Non-technical Flow)
 
-### Add products
-
-1. Go to `/admin`
-2. Sign in or sign up admin
-3. Fill product form fields
-4. Add variants (label + optional color + preview image)
-5. Add size/stock rows
-6. Upload images/videos
-7. Save
-
-### Make variant preview work correctly
-
-For each variant, set `previewImage` to one of your gallery image URLs (or uploaded image URL).
-
-### Add product video
-
-- Put YouTube/Vimeo URL in `videoUrl`, or
-- Upload a video file; first uploaded video can be used as fallback
-
-### Mark featured products
-
-Toggle `Show this as featured product` in admin form.
+1. Open `/admin`.
+2. Sign in / sign up admin.
+3. Use tabs:
+   - `Product Form`: create or update product
+   - `Manage Products`: edit/delete
+   - `Inventory Logs`: stock history
+   - `Categories`: create/delete categories
+   - `Store Settings`: update store name/logo/Messenger/contact
+4. In product form:
+   - fill base fields
+   - add variants with stock
+   - upload images/video or set URLs
+   - save
 
 ## Notes
 
-- No checkout/cart/payment flow is included by design.
-- Primary conversion action is Messenger inquiry.
-- All pages are responsive and mobile-first.
-- Media upload limit is enforced to 20 MB total per product in UI and 20 MB per file in Storage rules.
+- No checkout/payment is implemented by design.
+- Out-of-stock variants are disabled on product page.
+- Stock indicators are derived from variant stock first.
+- Messenger link is centralized in store settings (with env fallback).

@@ -23,6 +23,7 @@ function updateVariantRow(setForm, index, key, value) {
 export default function AdminProductForm({
   form,
   setForm,
+  categories,
   selectedFiles,
   setSelectedFiles,
   removedMediaKeys,
@@ -39,7 +40,7 @@ export default function AdminProductForm({
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2 className="sky-title text-3xl">{isEditing ? "Edit Product" : "Add Product"}</h2>
-          <p className="mt-1 text-sm text-slate-600">Upload media, variants, inventory, and video links.</p>
+          <p className="mt-1 text-sm text-slate-600">Create dynamic products with category, variants, and inventory.</p>
         </div>
         {isEditing ? (
           <button
@@ -77,14 +78,36 @@ export default function AdminProductForm({
           />
           <select
             value={form.category}
-            onChange={(event) => setForm((current) => ({ ...current, category: event.target.value }))}
+            onChange={(event) => {
+              const selected = categories.find((category) => category.slug === event.target.value);
+              setForm((current) => ({
+                ...current,
+                category: event.target.value,
+                categoryLabel: selected?.name || current.categoryLabel
+              }));
+            }}
             className="rounded-2xl border border-cloud-200 bg-white px-4 py-3 text-sm focus:border-cloud-500 focus:outline-none"
           >
-            <option value="fashion">Fashion</option>
-            <option value="beauty">Beauty</option>
-            <option value="gadgets">Gadgets</option>
-            <option value="home">Home</option>
-            <option value="sports">Sports</option>
+            {categories.map((category) => (
+              <option key={category.id} value={category.slug}>
+                {category.name}
+              </option>
+            ))}
+          </select>
+          <input
+            value={form.brand}
+            onChange={(event) => setForm((current) => ({ ...current, brand: event.target.value }))}
+            type="text"
+            placeholder="Brand (optional)"
+            className="rounded-2xl border border-cloud-200 bg-white px-4 py-3 text-sm focus:border-cloud-500 focus:outline-none"
+          />
+          <select
+            value={form.status}
+            onChange={(event) => setForm((current) => ({ ...current, status: event.target.value }))}
+            className="rounded-2xl border border-cloud-200 bg-white px-4 py-3 text-sm focus:border-cloud-500 focus:outline-none"
+          >
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
           </select>
           <input
             value={form.price}
@@ -115,10 +138,10 @@ export default function AdminProductForm({
 
         <div className="grid gap-3 md:grid-cols-2">
           <input
-            value={form.featuredImage}
-            onChange={(event) => setForm((current) => ({ ...current, featuredImage: event.target.value }))}
+            value={form.mainImage || form.featuredImage || ""}
+            onChange={(event) => setForm((current) => ({ ...current, mainImage: event.target.value, featuredImage: event.target.value }))}
             type="url"
-            placeholder="Featured image URL (optional)"
+            placeholder="Main image URL (optional)"
             className="rounded-2xl border border-cloud-200 bg-white px-4 py-3 text-sm focus:border-cloud-500 focus:outline-none"
           />
           <input
@@ -193,7 +216,7 @@ export default function AdminProductForm({
 
         <div className="rounded-2xl border border-cloud-200 bg-white p-4">
           <div className="mb-3 flex items-center justify-between gap-3">
-            <h3 className="text-sm font-bold uppercase tracking-[0.12em] text-cloud-700">Variants</h3>
+            <h3 className="text-sm font-bold uppercase tracking-[0.12em] text-cloud-700">Variant Inventory</h3>
             <button
               type="button"
               onClick={() =>
@@ -203,10 +226,14 @@ export default function AdminProductForm({
                     ...current.variants,
                     {
                       id: `variant-${Date.now()}`,
-                      name: "",
+                      type: "design",
+                      value: "",
                       label: "",
+                      image: "",
                       colorHex: "",
-                      previewImage: ""
+                      stock: 0,
+                      sku: "",
+                      priceOverride: ""
                     }
                   ]
                 }))
@@ -219,17 +246,33 @@ export default function AdminProductForm({
 
           <div className="grid gap-3">
             {form.variants.map((variant, index) => (
-              <div key={variant.id || `variant-${index}`} className="grid gap-2 rounded-2xl border border-cloud-200 p-3 md:grid-cols-4">
+              <div key={variant.id || `variant-${index}`} className="grid gap-2 rounded-2xl border border-cloud-200 p-3 md:grid-cols-4 xl:grid-cols-8">
+                <select
+                  value={variant.type || "design"}
+                  onChange={(event) => updateVariantRow(setForm, index, "type", event.target.value)}
+                  className="rounded-xl border border-cloud-200 px-3 py-2 text-sm focus:border-cloud-500 focus:outline-none"
+                >
+                  <option value="color">Color</option>
+                  <option value="size">Size</option>
+                  <option value="design">Design</option>
+                  <option value="style">Style</option>
+                </select>
                 <input
-                  value={variant.name}
-                  onChange={(event) => updateVariantRow(setForm, index, "name", event.target.value)}
-                  placeholder="Variant name"
+                  value={variant.value || ""}
+                  onChange={(event) => updateVariantRow(setForm, index, "value", event.target.value)}
+                  placeholder="Value"
                   className="rounded-xl border border-cloud-200 px-3 py-2 text-sm focus:border-cloud-500 focus:outline-none"
                 />
                 <input
-                  value={variant.label}
+                  value={variant.label || ""}
                   onChange={(event) => updateVariantRow(setForm, index, "label", event.target.value)}
                   placeholder="Label"
+                  className="rounded-xl border border-cloud-200 px-3 py-2 text-sm focus:border-cloud-500 focus:outline-none"
+                />
+                <input
+                  value={variant.image || variant.previewImage || ""}
+                  onChange={(event) => updateVariantRow(setForm, index, "image", event.target.value)}
+                  placeholder="Image URL"
                   className="rounded-xl border border-cloud-200 px-3 py-2 text-sm focus:border-cloud-500 focus:outline-none"
                 />
                 <input
@@ -239,12 +282,28 @@ export default function AdminProductForm({
                   className="rounded-xl border border-cloud-200 px-3 py-2 text-sm focus:border-cloud-500 focus:outline-none"
                 />
                 <input
-                  value={variant.previewImage || ""}
-                  onChange={(event) => updateVariantRow(setForm, index, "previewImage", event.target.value)}
-                  placeholder="Preview image URL"
+                  value={variant.stock}
+                  onChange={(event) => updateVariantRow(setForm, index, "stock", event.target.value)}
+                  type="number"
+                  min="0"
+                  placeholder="Stock"
                   className="rounded-xl border border-cloud-200 px-3 py-2 text-sm focus:border-cloud-500 focus:outline-none"
                 />
-                <div className="md:col-span-4">
+                <input
+                  value={variant.sku || ""}
+                  onChange={(event) => updateVariantRow(setForm, index, "sku", event.target.value)}
+                  placeholder="SKU (optional)"
+                  className="rounded-xl border border-cloud-200 px-3 py-2 text-sm focus:border-cloud-500 focus:outline-none"
+                />
+                <input
+                  value={variant.priceOverride ?? ""}
+                  onChange={(event) => updateVariantRow(setForm, index, "priceOverride", event.target.value)}
+                  type="number"
+                  step="0.01"
+                  placeholder="Price override"
+                  className="rounded-xl border border-cloud-200 px-3 py-2 text-sm focus:border-cloud-500 focus:outline-none"
+                />
+                <div className="md:col-span-4 xl:col-span-8">
                   <button
                     type="button"
                     onClick={() =>
@@ -268,7 +327,7 @@ export default function AdminProductForm({
 
         <div className="rounded-2xl border border-cloud-200 bg-white p-4">
           <div className="mb-3 flex items-center justify-between gap-3">
-            <h3 className="text-sm font-bold uppercase tracking-[0.12em] text-cloud-700">Sizes and Stock</h3>
+            <h3 className="text-sm font-bold uppercase tracking-[0.12em] text-cloud-700">Additional Size Inventory</h3>
             <button
               type="button"
               onClick={() =>
