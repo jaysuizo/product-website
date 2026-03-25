@@ -6,7 +6,7 @@ export default function ProductGrid({ products, onSelect, messengerUrl }) {
   }
 
   return (
-    <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3 lg:grid-cols-4">
+    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-4">
       {products.map((product) => (
         <ProductCard key={product.id} product={product} onSelect={onSelect} messengerUrl={messengerUrl} />
       ))}

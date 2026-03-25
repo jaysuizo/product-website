@@ -98,6 +98,8 @@ export function normalizeProduct(docId, raw = {}) {
     id: docId,
     slug: toSlug(raw.slug || raw.name || docId),
     name: String(raw.name || "Untitled Product").trim(),
+    category: String(raw.category || raw.categoryName || "Uncategorized").trim() || "Uncategorized",
+    featured: Boolean(raw.featured),
     price: parsePrice(raw.price),
     stocks: normalizeStocks(raw),
     description: String(raw.description || raw.shortDescription || raw.fullDescription || ""),
@@ -128,6 +130,8 @@ export function buildProductPayload(form, options = {}) {
   const payload = {
     name,
     slug,
+    category: String(form.category || "").trim() || "General",
+    featured: Boolean(form.featured),
     price: parsePrice(form.price),
     stocks: parseStocks(form.stocks),
     description: String(form.description || ""),
@@ -148,6 +152,8 @@ export function createEmptyProductForm() {
   return {
     id: "",
     name: "",
+    category: "General",
+    featured: false,
     price: "",
     stocks: "",
     description: "",

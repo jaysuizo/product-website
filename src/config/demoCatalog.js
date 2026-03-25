@@ -6,6 +6,8 @@ export const DEMO_PRODUCTS_RAW = [
   {
     id: "demo-earbuds",
     name: "Wireless Earbuds",
+    category: "Gadgets",
+    featured: true,
     price: 799,
     stocks: 24,
     description: "Clear sound with comfortable all-day fit.",
@@ -16,6 +18,8 @@ export const DEMO_PRODUCTS_RAW = [
   {
     id: "demo-watch",
     name: "Smartwatch",
+    category: "Gadgets",
+    featured: true,
     price: 1350,
     stocks: 16,
     description: "Track fitness and notifications in one glance.",
@@ -26,6 +30,8 @@ export const DEMO_PRODUCTS_RAW = [
   {
     id: "demo-sneakers",
     name: "Sneakers",
+    category: "Fashion",
+    featured: false,
     price: 980,
     stocks: 30,
     description: "Lightweight everyday shoes with cushioned sole.",
@@ -36,6 +42,8 @@ export const DEMO_PRODUCTS_RAW = [
   {
     id: "demo-bag",
     name: "Laptop Backpack",
+    category: "Fashion",
+    featured: false,
     price: 960,
     stocks: 12,
     description: "Water-resistant backpack with laptop sleeve.",
@@ -46,6 +54,8 @@ export const DEMO_PRODUCTS_RAW = [
   {
     id: "demo-speaker",
     name: "Bluetooth Speaker",
+    category: "Gadgets",
+    featured: true,
     price: 1100,
     stocks: 10,
     description: "Portable speaker with strong bass.",
@@ -56,6 +66,8 @@ export const DEMO_PRODUCTS_RAW = [
   {
     id: "demo-camera",
     name: "DSLR Camera",
+    category: "Gadgets",
+    featured: false,
     price: 29500,
     stocks: 4,
     description: "Sharp image quality for photo and video.",

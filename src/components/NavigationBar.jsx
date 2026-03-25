@@ -17,7 +17,7 @@ export default function NavigationBar() {
 
   return (
     <header className="sticky top-0 z-50 border-b border-white/70 bg-white/80 backdrop-blur-xl">
-      <div className="mx-auto flex w-[min(1240px,96vw)] items-center justify-between gap-2 py-2 sm:w-[min(1240px,95vw)] sm:py-3">
+      <div className="mx-auto flex w-[min(1240px,96vw)] items-center justify-between gap-2 py-1.5 sm:w-[min(1240px,95vw)] sm:py-3">
         <Link to="/" className="flex min-w-0 items-center gap-2 sm:gap-3">
           {settings.storeLogo ? (
             <img src={settings.storeLogo} alt={brandName} className="h-9 w-9 rounded-xl object-cover shadow sm:h-11 sm:w-11 sm:rounded-2xl" />
@@ -37,7 +37,7 @@ export default function NavigationBar() {
             href={messengerUrl}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex rounded-full border border-cloud-200 bg-white px-2.5 py-1.5 text-xs font-bold text-cloud-700 hover:border-cloud-400 sm:px-4 sm:py-2 sm:text-sm"
+            className="inline-flex min-h-10 items-center rounded-full border border-cloud-200 bg-white px-2.5 py-1.5 text-xs font-bold text-cloud-700 hover:border-cloud-400 active:scale-[0.98] sm:px-4 sm:py-2 sm:text-sm"
           >
             <span className="sm:hidden">M</span>
             <span className="hidden sm:inline">Messenger</span>

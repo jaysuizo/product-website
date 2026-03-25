@@ -9,7 +9,6 @@ import AdminStoreSettings from "../components/admin/AdminStoreSettings";
 import { DEFAULT_STORE_SETTINGS, SITE_CONFIG } from "../config/site";
 import { useProducts } from "../contexts/ProductsContext";
 import {
-  createAdminRecord,
   deleteProductRecord,
   isUserAdmin,
   saveProductRecord,
@@ -18,16 +17,6 @@ import {
 import { auth, db } from "../lib/firebaseClient";
 import { toSlug } from "../lib/format";
 import { buildProductPayload, createEmptyProductForm, getProductStock } from "../lib/productModel";
-
-const ADMIN_ALLOWLIST = String(import.meta.env.VITE_ADMIN_ALLOWLIST || "")
-  .split(",")
-  .map((email) => email.trim().toLowerCase())
-  .filter(Boolean);
-
-function isAllowlistedAdminEmail(email) {
-  const normalized = String(email || "").trim().toLowerCase();
-  return normalized && ADMIN_ALLOWLIST.includes(normalized);
-}
 
 function getFriendlyError(error) {
   const code = String(error?.code || "");
@@ -54,14 +43,13 @@ function parseImageUrls(value) {
 
 export default function AdminPage() {
   const navigate = useNavigate();
-  const { liveProducts, settings, warning, usingDemoData } = useProducts();
+  const { liveProducts, categories, settings, warning, usingDemoData } = useProducts();
   const [authUser, setAuthUser] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [authBusy, setAuthBusy] = useState(false);
   const [authForm, setAuthForm] = useState({ email: "", password: "" });
   const [authMessage, setAuthMessage] = useState("Sign in with your admin account.");
   const [authError, setAuthError] = useState("");
-  const [adminProvisionMessage, setAdminProvisionMessage] = useState("");
 
   const [activeTab, setActiveTab] = useState("form");
   const [form, setForm] = useState(createEmptyProductForm());
@@ -87,7 +75,6 @@ export default function AdminPage() {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setAuthUser(user);
       setAuthError("");
-      setAdminProvisionMessage("");
       setAuthMessage(user ? "Checking admin permission..." : "Signed out.");
 
       if (!user) {
@@ -96,13 +83,7 @@ export default function AdminPage() {
       }
 
       try {
-        let allowed = await isUserAdmin(user.uid);
-
-        if (!allowed && isAllowlistedAdminEmail(user.email)) {
-          await createAdminRecord(user.uid, user.email || "");
-          allowed = true;
-          setAdminProvisionMessage("Admin role was auto-provisioned from allowlist.");
-        }
+        const allowed = await isUserAdmin(user.uid);
 
         setIsAdmin(allowed);
         if (allowed) {
@@ -124,9 +105,9 @@ export default function AdminPage() {
   const stats = useMemo(() => {
     const totalStock = adminProducts.reduce((sum, item) => sum + getProductStock(item), 0);
     const withVideo = adminProducts.filter((item) => item.video).length;
-    const withSize = adminProducts.filter((item) => String(item.size || "").trim()).length;
+    const featuredCount = adminProducts.filter((item) => item.featured).length;
 
-    return { totalStock, withVideo, withSize };
+    return { totalStock, withVideo, featuredCount };
   }, [adminProducts]);
 
   function resetFormState() {
@@ -163,6 +144,8 @@ export default function AdminPage() {
     setForm({
       id: product.id,
       name: product.name || "",
+      category: product.category || "General",
+      featured: Boolean(product.featured),
       price: product.price ?? "",
       stocks: String(product.stocks ?? ""),
       description: product.description || "",
@@ -228,6 +211,7 @@ export default function AdminPage() {
 
     try {
       const name = String(form.name || "").trim();
+      const category = String(form.category || "").trim() || "General";
       const imageList = parseImageUrls(form.imageUrlsText);
       const image = imageList[0] || "";
       const descriptionRaw = String(form.description || "");
@@ -252,6 +236,7 @@ export default function AdminPage() {
         {
           ...form,
           name,
+          category,
           description: descriptionRaw,
           stocks,
           images: imageList,
@@ -339,12 +324,6 @@ export default function AdminPage() {
         busy={authBusy}
       />
 
-      {adminProvisionMessage ? (
-        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">
-          {adminProvisionMessage}
-        </div>
-      ) : null}
-
       {authUser && isAdmin ? (
         <>
           <section className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
@@ -353,8 +332,8 @@ export default function AdminPage() {
               <p className="mt-1.5 text-2xl font-black text-cloud-900 sm:text-3xl">{adminProducts.length}</p>
             </article>
             <article className="card-surface p-4 sm:p-5">
-              <p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">With Size</p>
-              <p className="mt-1.5 text-2xl font-black text-cloud-900 sm:text-3xl">{stats.withSize}</p>
+              <p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">Featured</p>
+              <p className="mt-1.5 text-2xl font-black text-cloud-900 sm:text-3xl">{stats.featuredCount}</p>
             </article>
             <article className="card-surface p-4 sm:p-5">
               <p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">With Video</p>
@@ -401,6 +380,7 @@ export default function AdminPage() {
                 <AdminProductForm
                   form={form}
                   setForm={setForm}
+                  categories={categories}
                   onSubmit={handleSubmitProduct}
                   onCancel={() => {
                     resetFormState();

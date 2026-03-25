@@ -5,6 +5,7 @@ Clean single-store homepage built with React + Vite + Tailwind + Firebase.
 ## What It Is
 
 - One homepage for browsing all products
+- Home category filter (All + product categories)
 - No separate shop page
 - No checkout/payment flow
 - Product quick-view modal with:
@@ -24,6 +25,8 @@ Clean single-store homepage built with React + Vite + Tailwind + Firebase.
 
 - `name` (string, required)
 - `slug` (string, required)
+- `category` (string, required)
+- `featured` (boolean, required)
 - `price` (number|null)
 - `stocks` (number, required)
 - `description` (string, required)
@@ -66,7 +69,6 @@ VITE_FIREBASE_STORAGE_BUCKET=...
 VITE_FIREBASE_MESSAGING_SENDER_ID=...
 VITE_FIREBASE_APP_ID=...
 VITE_MESSENGER_URL=https://m.me/YOUR_USERNAME
-VITE_ADMIN_ALLOWLIST=admin@example.com
 ```
 
 ## Notes
@@ -75,5 +77,6 @@ VITE_ADMIN_ALLOWLIST=admin@example.com
 - Messenger link is centralized via store settings (with env fallback).
 - Public navbar does not expose admin entry.
 - Admin access is guarded by Firebase Auth + `admins/{uid}` Firestore check.
+- Admin is manual-only: create `admins/{uid}` in Firebase Console for approved accounts.
 - Spark mode enabled: admin uses image/video URL inputs (no Firebase Storage upload required).
 - Store logo uses URL input in admin settings.

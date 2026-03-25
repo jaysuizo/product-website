@@ -39,12 +39,19 @@ export default function AdminProductList({ products, onEdit, onDelete, busy }) {
                       </div>
                     )}
                     <div>
-                      <h3 className="text-base font-extrabold text-cloud-900 sm:text-lg">{product.name}</h3>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h3 className="text-base font-extrabold text-cloud-900 sm:text-lg">{product.name}</h3>
+                        {product.featured ? (
+                          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.08em] text-amber-800">
+                            Featured
+                          </span>
+                        ) : null}
+                      </div>
                       <p className="mt-1 text-xs text-slate-600 sm:text-sm">
                         {product.description || "No description"}
                       </p>
                       <p className="mt-2 text-xs font-semibold text-slate-500">
-                        {product.price ? formatCurrency(product.price) : "No price"} | {getProductStock(product)} stock |{" "}
+                        {product.category || "Uncategorized"} | {product.price ? formatCurrency(product.price) : "No price"} | {getProductStock(product)} stock |{" "}
                         {product.size || "Free Size"} |{" "}
                         {availabilityLabel[availability] || availabilityLabel.in_stock}
                       </p>

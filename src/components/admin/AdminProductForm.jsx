@@ -1,6 +1,7 @@
 export default function AdminProductForm({
   form,
   setForm,
+  categories = [],
   onSubmit,
   onCancel,
   isEditing,
@@ -46,6 +47,37 @@ export default function AdminProductForm({
           className="rounded-2xl border border-cloud-200 bg-white px-3.5 py-3 text-sm focus:border-cloud-500 focus:outline-none"
           required
         />
+
+        <div className="grid gap-1.5">
+          <label htmlFor="product-category" className="text-xs font-bold uppercase tracking-[0.1em] text-slate-600">
+            Category
+          </label>
+          <input
+            id="product-category"
+            value={form.category || ""}
+            onChange={(event) => setForm((current) => ({ ...current, category: event.target.value }))}
+            type="text"
+            placeholder="Category (example: Gadgets)"
+            list="category-options"
+            className="rounded-2xl border border-cloud-200 bg-white px-3.5 py-3 text-sm focus:border-cloud-500 focus:outline-none"
+            required
+          />
+          <datalist id="category-options">
+            {categories.map((category) => (
+              <option key={category.id || category.slug || category.name} value={category.name} />
+            ))}
+          </datalist>
+        </div>
+
+        <label className="flex items-center gap-2 rounded-2xl border border-cloud-200 bg-white px-3.5 py-3 text-sm font-semibold text-cloud-800">
+          <input
+            checked={Boolean(form.featured)}
+            onChange={(event) => setForm((current) => ({ ...current, featured: event.target.checked }))}
+            type="checkbox"
+            className="h-4 w-4 rounded border-cloud-300 text-cloud-600 focus:ring-cloud-500"
+          />
+          Mark as featured product
+        </label>
 
         <div className="grid gap-3 md:grid-cols-2">
           <input

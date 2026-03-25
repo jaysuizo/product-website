@@ -38,6 +38,8 @@ service cloud.firestore {
       return data.keys().hasAll([
         'name',
         'slug',
+        'category',
+        'featured',
         'stocks',
         'description',
         'size',
@@ -51,6 +53,8 @@ service cloud.firestore {
       return data.keys().hasOnly([
         'name',
         'slug',
+        'category',
+        'featured',
         'price',
         'stocks',
         'description',
@@ -68,6 +72,9 @@ service cloud.firestore {
         hasOnlyAllowedProductKeys(data) &&
         isString(data.name) &&
         isString(data.slug) &&
+        isString(data.category) &&
+        data.category.size() > 0 &&
+        isBool(data.featured) &&
         isNumber(data.stocks) &&
         data.stocks >= 0 &&
         isString(data.description) &&
@@ -173,9 +180,7 @@ service cloud.firestore {
 
     match /admins/{uid} {
       allow read: if isOwner(uid) || isAdmin();
-      allow create: if isOwner(uid) &&
-        !exists(/databases/$(database)/documents/admins/$(uid));
-      allow update, delete: if false;
+      allow create, update, delete: if false;
     }
 
     match /{document=**} {
