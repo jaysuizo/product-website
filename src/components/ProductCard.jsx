@@ -5,14 +5,11 @@ import { getProductMessengerLink } from "../lib/messenger";
 
 const availabilityStyles = {
   in_stock: "bg-emerald-50 text-emerald-700",
-  low_stock: "bg-amber-50 text-amber-700",
-  out_of_stock: "bg-rose-50 text-rose-700",
-  inactive: "bg-slate-100 text-slate-700"
+  out_of_stock: "bg-rose-50 text-rose-700"
 };
 
 const availabilityLabels = {
   in_stock: "In stock",
-  low_stock: "Low",
   out_of_stock: "Out"
 };
 

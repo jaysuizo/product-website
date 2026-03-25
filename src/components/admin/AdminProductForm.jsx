@@ -90,7 +90,7 @@ export default function AdminProductForm({
           value={form.imageUrlsText || ""}
           onChange={(event) => setForm((current) => ({ ...current, imageUrlsText: event.target.value }))}
           rows={4}
-          placeholder={"Image URLs (one per line)\nhttps://...\nhttps://..."}
+          placeholder={"Image URLs (one per line, no max)\nhttps://...\nhttps://..."}
           className="rounded-2xl border border-cloud-200 bg-white px-3.5 py-3 text-sm focus:border-cloud-500 focus:outline-none"
           required
         />

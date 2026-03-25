@@ -86,9 +86,6 @@ export function getProductAvailability(product) {
   if (stocks <= 0) {
     return "out_of_stock";
   }
-  if (stocks <= 5) {
-    return "low_stock";
-  }
   return "in_stock";
 }
 

@@ -3,9 +3,7 @@ import { getProductAvailability, getProductStock } from "../../lib/productModel"
 
 const availabilityLabel = {
   in_stock: "In stock",
-  low_stock: "Low stock",
-  out_of_stock: "Out of stock",
-  inactive: "Inactive"
+  out_of_stock: "Out of stock"
 };
 
 export default function AdminProductList({ products, onEdit, onDelete, busy }) {
