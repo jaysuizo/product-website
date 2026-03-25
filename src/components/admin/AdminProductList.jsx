@@ -29,9 +29,9 @@ export default function AdminProductList({ products, onEdit, onDelete, busy }) {
               <article key={product.id} className="rounded-2xl border border-cloud-200 bg-white p-3.5 sm:p-4">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="flex items-start gap-3">
-                    {product.featuredImage ? (
+                    {product.image ? (
                       <img
-                        src={product.featuredImage}
+                        src={product.image}
                         alt={product.name}
                         className="h-12 w-12 rounded-xl object-cover sm:h-14 sm:w-14"
                       />
@@ -41,22 +41,13 @@ export default function AdminProductList({ products, onEdit, onDelete, busy }) {
                       </div>
                     )}
                     <div>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <h3 className="text-base font-extrabold text-cloud-900 sm:text-lg">{product.name}</h3>
-                        {product.featured ? (
-                          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-700">
-                            Featured
-                          </span>
-                        ) : null}
-                      </div>
+                      <h3 className="text-base font-extrabold text-cloud-900 sm:text-lg">{product.name}</h3>
                       <p className="mt-1 text-xs text-slate-600 sm:text-sm">
-                        {(product.sizes || []).length > 0
-                          ? `Sizes/Variants: ${product.sizes.join(", ")}`
-                          : "No sizes/variants yet"}
+                        {product.description || "No description"}
                       </p>
                       <p className="mt-2 text-xs font-semibold text-slate-500">
                         {product.price ? formatCurrency(product.price) : "No price"} | {getProductStock(product)} stock |{" "}
-                        {(product.sizes || []).length} options |{" "}
+                        {product.size || "Free Size"} |{" "}
                         {availabilityLabel[availability] || availabilityLabel.in_stock}
                       </p>
                     </div>

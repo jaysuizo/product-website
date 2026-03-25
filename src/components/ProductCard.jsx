@@ -1,8 +1,7 @@
-import { Link } from "react-router-dom";
 import { formatCurrency } from "../lib/format";
 import { getProductAvailability, getProductStock } from "../lib/productModel";
 import { SITE_CONFIG } from "../config/site";
-import { useProducts } from "../contexts/ProductsContext";
+import { getProductMessengerLink } from "../lib/messenger";
 
 const availabilityStyles = {
   in_stock: "bg-emerald-50 text-emerald-700",
@@ -14,37 +13,15 @@ const availabilityStyles = {
 const availabilityLabels = {
   in_stock: "In stock",
   low_stock: "Low",
-  out_of_stock: "Out",
-  inactive: "Unavailable"
+  out_of_stock: "Out"
 };
 
-function buildMessengerLink(baseUrl, productName) {
-  const safeBase = String(baseUrl || "").trim();
-  if (!safeBase) {
-    return SITE_CONFIG.messengerUrl;
-  }
-
-  try {
-    const url = new URL(safeBase);
-    if (url.hostname.includes("m.me") || url.hostname.includes("facebook.com")) {
-      url.searchParams.set("ref", `product-${productName}`);
-    }
-    return url.toString();
-  } catch {
-    return safeBase;
-  }
-}
-
 export default function ProductCard({ product, onSelect, messengerUrl }) {
-  const { settings } = useProducts();
   const stock = getProductStock(product);
   const availability = getProductAvailability(product);
-  const variantCount = Array.isArray(product.sizes) ? product.sizes.length : 0;
-  const imageUrl = product.featuredImage || product.image || "";
-  const productMessengerUrl = buildMessengerLink(
-    messengerUrl || settings.messengerLink || SITE_CONFIG.messengerUrl,
-    product.name
-  );
+  const imageUrl = product.image || "";
+  const sizeText = String(product.size || "").trim();
+  const productMessengerUrl = getProductMessengerLink(product, messengerUrl || SITE_CONFIG.messengerUrl);
 
   const openDetails = () => {
     if (typeof onSelect === "function") {
@@ -76,17 +53,7 @@ export default function ProductCard({ product, onSelect, messengerUrl }) {
             </div>
           </div>
         </button>
-      ) : (
-        <Link to={`/product/${product.slug}`} className="block">
-          <div className="relative aspect-[4/3] overflow-hidden bg-cloud-100 sm:aspect-square">
-            {imageUrl ? (
-              <img src={imageUrl} alt={product.name} className="h-full w-full object-cover" loading="lazy" />
-            ) : (
-              <div className="grid h-full place-items-center text-xs font-semibold text-cloud-700">No image</div>
-            )}
-          </div>
-        </Link>
-      )}
+      ) : null}
 
       <div className="space-y-2 p-2.5 sm:p-3">
         <button
@@ -104,10 +71,15 @@ export default function ProductCard({ product, onSelect, messengerUrl }) {
           ) : (
             <p className="text-xs font-bold text-cloud-700 sm:text-sm">Message for price</p>
           )}
-          <span className="rounded-full border border-cloud-200 bg-white px-2 py-0.5 text-[10px] font-semibold text-cloud-700 sm:text-xs">
-            {variantCount > 0 ? `${variantCount} sizes` : "One size"}
-          </span>
+          {sizeText ? (
+            <span className="rounded-full border border-cloud-200 bg-white px-2 py-0.5 text-[10px] font-semibold text-cloud-700 sm:text-xs">
+              {sizeText}
+            </span>
+          ) : null}
         </div>
+        {product.description ? (
+          <p className="line-clamp-2 text-[11px] text-slate-600 sm:text-xs">{product.description}</p>
+        ) : null}
 
         <div className="grid grid-cols-2 gap-2">
           <button

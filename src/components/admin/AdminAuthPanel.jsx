@@ -5,18 +5,21 @@ export default function AdminAuthPanel({
   onAuthFormChange,
   onSignIn,
   onLogout,
+  onGoHome,
   authMessage,
   authError,
   busy
 }) {
+  const isSignedInNonAdmin = Boolean(user) && !isAdmin;
+
   return (
     <section className="card-surface p-4 sm:p-6 md:p-7">
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3 sm:mb-5">
         <div>
           <p className="text-xs font-bold uppercase tracking-[0.16em] text-cloud-700">Admin Portal</p>
-          <h1 className="sky-title mt-2 text-2xl sm:text-4xl">Upload and manage inventory</h1>
+          <h1 className="sky-title mt-2 text-2xl sm:text-4xl">Inventory Management</h1>
         </div>
-        {user && isAdmin ? (
+        {user ? (
           <button
             type="button"
             onClick={onLogout}
@@ -35,7 +38,7 @@ export default function AdminAuthPanel({
         {authError || authMessage}
       </p>
 
-      {!user || !isAdmin ? (
+      {!user ? (
         <form
           className="mt-4 grid gap-3 md:mt-5 md:grid-cols-2"
           onSubmit={(event) => {
@@ -47,7 +50,7 @@ export default function AdminAuthPanel({
             value={authForm.email}
             onChange={(event) => onAuthFormChange("email", event.target.value)}
             type="email"
-            placeholder="Admin email (must exist in admins collection)"
+            placeholder="Admin email"
             className="rounded-2xl border border-cloud-200 bg-white px-4 py-3 text-sm focus:border-cloud-500 focus:outline-none"
             required
           />
@@ -68,6 +71,18 @@ export default function AdminAuthPanel({
             Sign In
           </button>
         </form>
+      ) : null}
+
+      {isSignedInNonAdmin ? (
+        <div className="mt-4 flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={onGoHome}
+            className="rounded-xl border border-cloud-200 bg-white px-4 py-2 text-sm font-bold text-cloud-700 hover:border-cloud-400"
+          >
+            Go to Home
+          </button>
+        </div>
       ) : null}
     </section>
   );

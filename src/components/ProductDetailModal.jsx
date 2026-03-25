@@ -1,54 +1,21 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { formatCurrency } from "../lib/format";
-import { getProductStock, getVariantStock } from "../lib/productModel";
+import { getProductStock } from "../lib/productModel";
 import ProductInquiryButton from "./ProductInquiryButton";
 import ProductVideo from "./ProductVideo";
-import VariantSelector from "./VariantSelector";
 import { SITE_CONFIG } from "../config/site";
-
-function buildMessengerLink(baseUrl, productName) {
-  const safeBase = String(baseUrl || "").trim();
-  if (!safeBase) {
-    return SITE_CONFIG.messengerUrl;
-  }
-
-  try {
-    const url = new URL(safeBase);
-    if (url.hostname.includes("m.me") || url.hostname.includes("facebook.com")) {
-      url.searchParams.set("ref", `product-${productName}`);
-    }
-    return url.toString();
-  } catch {
-    return safeBase;
-  }
-}
+import { getProductMessengerLink } from "../lib/messenger";
 
 export default function ProductDetailModal({ product, messengerUrl, onClose }) {
-  const [selectedVariantId, setSelectedVariantId] = useState("");
   const [activeImage, setActiveImage] = useState("");
-
-  const selectedVariant = useMemo(() => {
-    if (!product || !selectedVariantId) {
-      return null;
-    }
-    return product.variants.find((variant) => variant.id === selectedVariantId) || null;
-  }, [product, selectedVariantId]);
 
   useEffect(() => {
     if (!product) {
       return;
     }
 
-    const defaultVariant = product.variants.find((variant) => getVariantStock(variant) > 0) || product.variants[0] || null;
-    setSelectedVariantId(defaultVariant?.id || "");
-    setActiveImage(defaultVariant?.image || product.mainImage || product.image || "");
+    setActiveImage(product.image || "");
   }, [product]);
-
-  useEffect(() => {
-    if (selectedVariant?.image) {
-      setActiveImage(selectedVariant.image);
-    }
-  }, [selectedVariant]);
 
   useEffect(() => {
     if (!product) {
@@ -74,9 +41,12 @@ export default function ProductDetailModal({ product, messengerUrl, onClose }) {
     return null;
   }
 
-  const gallery = product.galleryImages?.length ? product.galleryImages : [product.image || product.mainImage].filter(Boolean);
-  const stock = selectedVariant ? getVariantStock(selectedVariant) : getProductStock(product);
-  const productMessengerUrl = buildMessengerLink(messengerUrl, product.name);
+  const gallery = Array.isArray(product.images) && product.images.length > 0
+    ? product.images
+    : [product.image].filter(Boolean);
+  const stocks = getProductStock(product);
+  const sizeText = String(product.size || "").trim() || "Free Size";
+  const productMessengerUrl = getProductMessengerLink(product, messengerUrl || SITE_CONFIG.messengerUrl);
 
   return (
     <div className="fixed inset-0 z-[70] flex items-end justify-center bg-slate-950/55 p-0 sm:items-center sm:p-6" onClick={onClose}>
@@ -127,24 +97,22 @@ export default function ProductDetailModal({ product, messengerUrl, onClose }) {
               <p className="mt-1.5 text-lg font-black text-cloud-700 sm:text-xl">
                 {product.price ? formatCurrency(product.price) : "Message for price"}
               </p>
-              <p className="mt-1 text-xs font-semibold text-slate-600 sm:text-sm">Stock: {stock}</p>
+              <p className="mt-1 text-xs font-semibold text-slate-600 sm:text-sm">Stocks: {stocks}</p>
+              <p className="mt-1 text-xs font-semibold text-slate-600 sm:text-sm">Size: {sizeText}</p>
             </div>
 
-            <div>
-              <p className="mb-2 text-xs font-bold uppercase tracking-[0.12em] text-slate-500">Size / Variant</p>
-              <VariantSelector
-                variants={product.variants}
-                selectedVariantId={selectedVariantId}
-                onSelect={setSelectedVariantId}
-              />
-            </div>
+            {product.description ? (
+              <div className="whitespace-pre-wrap rounded-2xl border border-cloud-100 bg-cloud-50/60 p-3.5 text-sm text-slate-700">
+                {product.description}
+              </div>
+            ) : null}
 
             <ProductInquiryButton href={productMessengerUrl} label="Message us about this product" />
 
-            {product.videoUrl ? (
+            {product.video ? (
               <div className="space-y-2">
                 <p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">Product Video</p>
-                <ProductVideo productName={product.name} videoUrl={product.videoUrl} />
+                <ProductVideo productName={product.name} videoUrl={product.video} />
               </div>
             ) : null}
           </section>

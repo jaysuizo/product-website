@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { onAuthStateChanged, signInWithEmailAndPassword, signOut } from "firebase/auth";
 import { collection, doc, serverTimestamp } from "firebase/firestore";
 import AdminAuthPanel from "../components/admin/AdminAuthPanel";
 import AdminProductForm from "../components/admin/AdminProductForm";
 import AdminProductList from "../components/admin/AdminProductList";
 import AdminStoreSettings from "../components/admin/AdminStoreSettings";
-import { DEFAULT_STORE_SETTINGS } from "../config/site";
+import { DEFAULT_STORE_SETTINGS, SITE_CONFIG } from "../config/site";
 import { useProducts } from "../contexts/ProductsContext";
 import {
   createAdminRecord,
@@ -38,28 +39,21 @@ function getFriendlyError(error) {
     return "Password is too weak. Use at least 6 characters.";
   }
   if (code.includes("permission-denied")) {
-    return "Permission denied. Check Firestore/Storage rules.";
+    return "Permission denied. Check Firestore rules.";
   }
 
   return error?.message || "Unexpected error.";
-}
-
-function parseSizesText(value) {
-  return String(value || "")
-    .split(",")
-    .map((item) => item.trim())
-    .filter(Boolean);
 }
 
 function parseImageUrls(value) {
   return String(value || "")
     .split(/\r?\n|,/)
     .map((item) => item.trim())
-    .filter(Boolean)
-    .slice(0, 5);
+    .filter(Boolean);
 }
 
 export default function AdminPage() {
+  const navigate = useNavigate();
   const { liveProducts, settings, warning, usingDemoData } = useProducts();
   const [authUser, setAuthUser] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -84,7 +78,7 @@ export default function AdminPage() {
       storeName: settings.storeName,
       storeTagline: settings.storeTagline,
       storeLogo: settings.storeLogo,
-      messengerLink: settings.messengerLink,
+      messengerLink: SITE_CONFIG.messengerUrl,
       contactDetails: settings.contactDetails
     });
   }, [settings]);
@@ -113,10 +107,9 @@ export default function AdminPage() {
         setIsAdmin(allowed);
         if (allowed) {
           setAuthMessage(`Admin access granted: ${user.email || "Unknown email"}`);
-          return;
+        } else {
+          setAuthError("Unauthorized account. This page is admin-only.");
         }
-
-        setAuthError("This account is not in admins collection.");
       } catch (error) {
         console.error("Admin role check failed:", error);
         setIsAdmin(false);
@@ -130,10 +123,10 @@ export default function AdminPage() {
   const adminProducts = useMemo(() => liveProducts, [liveProducts]);
   const stats = useMemo(() => {
     const totalStock = adminProducts.reduce((sum, item) => sum + getProductStock(item), 0);
-    const withVideo = adminProducts.filter((item) => item.videoUrl).length;
-    const variantOptions = adminProducts.reduce((sum, item) => sum + (item.sizes?.length || 0), 0);
+    const withVideo = adminProducts.filter((item) => item.video).length;
+    const withSize = adminProducts.filter((item) => String(item.size || "").trim()).length;
 
-    return { totalStock, withVideo, variantOptions };
+    return { totalStock, withVideo, withSize };
   }, [adminProducts]);
 
   function resetFormState() {
@@ -167,27 +160,19 @@ export default function AdminPage() {
   }
 
   function handleEditProduct(product) {
-    const sizeValues = Array.isArray(product.sizes) && product.sizes.length > 0
-      ? product.sizes
-      : Array.isArray(product.variants)
-      ? product.variants.map((variant) => variant.label).filter(Boolean)
-      : [];
-    const sizesText = sizeValues.join(", ");
-
     setForm({
       id: product.id,
       name: product.name || "",
       price: product.price ?? "",
-      featured: Boolean(product.featured),
-      sizesText,
-      images: Array.isArray(product.images) && product.images.length > 0 ? [...product.images] : [...(product.galleryImages || [])].slice(0, 5),
+      stocks: String(product.stocks ?? ""),
+      description: product.description || "",
+      size: product.size || "",
       imageUrlsText: Array.isArray(product.images) && product.images.length > 0
         ? product.images.join("\n")
-        : Array.isArray(product.galleryImages) && product.galleryImages.length > 0
-        ? product.galleryImages.slice(0, 5).join("\n")
-        : "",
-      image: product.image || product.mainImage || "",
-      video: product.video || product.videoUrl || "",
+        : (product.image || ""),
+      images: Array.isArray(product.images) ? product.images : [],
+      image: product.image || "",
+      video: product.video || "",
       slug: product.slug || "",
       createdAt: product.createdAt || null
     });
@@ -243,29 +228,36 @@ export default function AdminPage() {
 
     try {
       const name = String(form.name || "").trim();
+      const imageList = parseImageUrls(form.imageUrlsText);
+      const image = imageList[0] || "";
+      const descriptionRaw = String(form.description || "");
+      const description = descriptionRaw.trim();
+      const stocks = Number.parseInt(String(form.stocks ?? ""), 10);
+
       if (!name) {
         throw new Error("Product name is required.");
       }
-
-      const productId = form.id || doc(collection(db, "products")).id;
-      const imageUrlsFromForm = parseImageUrls(form.imageUrlsText);
-      const images = imageUrlsFromForm.length > 0
-        ? imageUrlsFromForm
-        : (Array.isArray(form.images) ? form.images.filter(Boolean).slice(0, 5) : []);
-
-      if (images.length === 0) {
+      if (imageList.length === 0) {
         throw new Error("Add at least one image URL.");
       }
+      if (!description) {
+        throw new Error("Description is required.");
+      }
+      if (!Number.isFinite(stocks) || stocks < 0) {
+        throw new Error("Stocks must be a valid number (0 or higher).");
+      }
 
+      const productId = form.id || doc(collection(db, "products")).id;
       const payload = buildProductPayload(
         {
           ...form,
           name,
-          slug: toSlug(form.slug || name),
-          sizes: parseSizesText(form.sizesText),
-          images,
-          image: images[0],
-          video: String(form.video || "").trim()
+          description: descriptionRaw,
+          stocks,
+          images: imageList,
+          imageUrlsText: imageList.join("\n"),
+          image,
+          slug: toSlug(form.slug || name)
         },
         { fallbackId: productId }
       );
@@ -305,7 +297,7 @@ export default function AdminPage() {
         storeName: String(settingsForm.storeName || "").trim(),
         storeTagline: String(settingsForm.storeTagline || "").trim(),
         storeLogo: String(settingsForm.storeLogo || "").trim(),
-        messengerLink: String(settingsForm.messengerLink || "").trim(),
+        messengerLink: SITE_CONFIG.messengerUrl,
         contactDetails: String(settingsForm.contactDetails || "").trim(),
         updatedBy: authUser.uid,
         updatedByEmail: authUser.email || ""
@@ -341,6 +333,7 @@ export default function AdminPage() {
         onAuthFormChange={setAuthFormValue}
         onSignIn={handleSignIn}
         onLogout={handleLogout}
+        onGoHome={() => navigate("/")}
         authMessage={authMessage}
         authError={authError}
         busy={authBusy}
@@ -360,8 +353,8 @@ export default function AdminPage() {
               <p className="mt-1.5 text-2xl font-black text-cloud-900 sm:text-3xl">{adminProducts.length}</p>
             </article>
             <article className="card-surface p-4 sm:p-5">
-              <p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">Variant Options</p>
-              <p className="mt-1.5 text-2xl font-black text-cloud-900 sm:text-3xl">{stats.variantOptions}</p>
+              <p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">With Size</p>
+              <p className="mt-1.5 text-2xl font-black text-cloud-900 sm:text-3xl">{stats.withSize}</p>
             </article>
             <article className="card-surface p-4 sm:p-5">
               <p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">With Video</p>
@@ -375,7 +368,7 @@ export default function AdminPage() {
 
           {usingDemoData ? (
             <section className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-700">
-              You are viewing demo storefront data. Admin management only affects your live Firebase products.
+              You are viewing demo storefront data. Admin changes affect only your live Firestore products.
             </section>
           ) : null}
 

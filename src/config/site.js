@@ -1,7 +1,7 @@
 export const SITE_CONFIG = {
   brandName: "MyStore",
-  brandTagline: "Premium Product Showcase",
-  messengerUrl: import.meta.env.VITE_MESSENGER_URL || "https://m.me/YOUR_USERNAME",
+  brandTagline: "Simple. Clean. Quality.",
+  messengerUrl: "https://m.me/jay.suizo.1999",
   supportLabel: "Message on Messenger"
 };
 

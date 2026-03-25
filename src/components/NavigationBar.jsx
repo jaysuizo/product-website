@@ -1,6 +1,7 @@
 import { Link, NavLink } from "react-router-dom";
 import { SITE_CONFIG } from "../config/site";
 import { useProducts } from "../contexts/ProductsContext";
+import { getMessengerLink } from "../lib/messenger";
 
 const navLinkClass = ({ isActive }) =>
   `rounded-full px-3 py-1.5 text-xs font-semibold transition sm:px-4 sm:py-2 sm:text-sm ${
@@ -12,7 +13,7 @@ const navLinkClass = ({ isActive }) =>
 export default function NavigationBar() {
   const { settings } = useProducts();
   const brandName = settings.storeName || SITE_CONFIG.brandName;
-  const messengerUrl = settings.messengerLink || SITE_CONFIG.messengerUrl;
+  const messengerUrl = getMessengerLink(SITE_CONFIG.messengerUrl);
 
   return (
     <header className="sticky top-0 z-50 border-b border-white/70 bg-white/80 backdrop-blur-xl">
@@ -31,9 +32,6 @@ export default function NavigationBar() {
         <nav className="flex items-center gap-1 sm:gap-2">
           <NavLink to="/" className={navLinkClass}>
             Home
-          </NavLink>
-          <NavLink to="/admin" className={navLinkClass}>
-            Admin
           </NavLink>
           <a
             href={messengerUrl}

@@ -33,13 +33,6 @@ export default function AdminStoreSettings({
             placeholder="Store tagline"
             className="rounded-2xl border border-cloud-200 bg-white px-3.5 py-3 text-sm focus:border-cloud-500 focus:outline-none sm:px-4"
           />
-          <input
-            value={settingsForm.messengerLink}
-            onChange={(event) => onSettingsChange("messengerLink", event.target.value)}
-            type="url"
-            placeholder="Messenger link (https://m.me/...)"
-            className="rounded-2xl border border-cloud-200 bg-white px-3.5 py-3 text-sm focus:border-cloud-500 focus:outline-none sm:px-4"
-          />
         </div>
 
         <div className="rounded-2xl border border-cloud-200 bg-white p-3.5 sm:p-4">

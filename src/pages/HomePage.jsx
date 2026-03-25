@@ -7,17 +7,10 @@ import ProductDetailModal from "../components/ProductDetailModal";
 import { SITE_CONFIG } from "../config/site";
 
 export default function HomePage() {
-  const { products, settings, loading, error, warning } = useProducts();
+  const { products, loading, error, warning } = useProducts();
   const [selectedProduct, setSelectedProduct] = useState(null);
 
-  const activeProducts = useMemo(
-    () => products.filter((product) => product.status !== "inactive"),
-    [products]
-  );
-  const featuredProducts = useMemo(
-    () => activeProducts.filter((product) => product.featured),
-    [activeProducts]
-  );
+  const allProducts = useMemo(() => products, [products]);
 
   return (
     <div className="space-y-4 sm:space-y-7">
@@ -38,43 +31,29 @@ export default function HomePage() {
         </div>
       </section>
 
-      {!loading && !error && featuredProducts.length > 0 ? (
-        <section className="space-y-2.5 sm:space-y-3">
-          <div className="flex flex-wrap items-end justify-between gap-3">
-            <h2 className="sky-title text-xl sm:text-4xl">Featured Products</h2>
-            <p className="text-xs font-semibold text-slate-600 sm:text-sm">{featuredProducts.length} featured</p>
-          </div>
-          <ProductGrid
-            products={featuredProducts}
-            onSelect={setSelectedProduct}
-            messengerUrl={settings.messengerLink || SITE_CONFIG.messengerUrl}
-          />
-        </section>
-      ) : null}
-
       <section id="products" className="space-y-2.5 sm:space-y-3">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <h2 className="sky-title text-xl sm:text-4xl">Products</h2>
-          <p className="text-xs font-semibold text-slate-600 sm:text-sm">{activeProducts.length} items</p>
+          <p className="text-xs font-semibold text-slate-600 sm:text-sm">{allProducts.length} items</p>
         </div>
 
         {loading ? <LoadingState kind="products" label="Loading products..." /> : null}
         {!loading && error ? <EmptyState title="Cannot load products" description={error} /> : null}
-        {!loading && !error && activeProducts.length === 0 ? (
+        {!loading && !error && allProducts.length === 0 ? (
           <EmptyState title="No products yet" description="Add products from admin to publish your catalog." />
         ) : null}
-        {!loading && !error && activeProducts.length > 0 ? (
+        {!loading && !error && allProducts.length > 0 ? (
           <ProductGrid
-            products={activeProducts}
+            products={allProducts}
             onSelect={setSelectedProduct}
-            messengerUrl={settings.messengerLink || SITE_CONFIG.messengerUrl}
+            messengerUrl={SITE_CONFIG.messengerUrl}
           />
         ) : null}
       </section>
 
       <ProductDetailModal
         product={selectedProduct}
-        messengerUrl={settings.messengerLink || SITE_CONFIG.messengerUrl}
+        messengerUrl={SITE_CONFIG.messengerUrl}
         onClose={() => setSelectedProduct(null)}
       />
     </div>
