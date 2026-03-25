@@ -85,12 +85,6 @@ export default function HomePage() {
           <p className="text-xs font-bold uppercase tracking-[0.2em] text-cloud-700">STORE</p>
           <h1 className="sky-title text-xl leading-tight sm:text-5xl">Quality Products</h1>
           <p className="text-xs font-semibold text-slate-700 sm:text-lg">Simple.Quality.</p>
-          <a
-            href="#products"
-            className="inline-flex min-h-10 items-center rounded-xl border border-cloud-200 bg-white px-3 py-2 text-xs font-bold text-cloud-700 hover:border-cloud-400"
-          >
-            View Products
-          </a>
         </div>
       </section>
 
