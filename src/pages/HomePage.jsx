@@ -26,6 +26,7 @@ export default function HomePage() {
       const name = String(item?.name || "").trim();
       if (!name) return;
       const id = item.slug || normalizeCategoryId(name);
+      if (normalizeCategoryId(id) === "all") return;
       if (!map.has(id)) {
         map.set(id, { id, name });
       }
@@ -34,6 +35,7 @@ export default function HomePage() {
     allProducts.forEach((item) => {
       const name = String(item?.category || "Uncategorized").trim();
       const id = normalizeCategoryId(name);
+      if (id === "all") return;
       if (!map.has(id)) {
         map.set(id, { id, name });
       }
