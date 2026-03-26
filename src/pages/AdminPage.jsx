@@ -216,7 +216,7 @@ export default function AdminPage() {
       const image = imageList[0] || "";
       const descriptionRaw = String(form.description || "");
       const description = descriptionRaw.trim();
-      const stocks = Number.parseInt(String(form.stocks ?? ""), 10);
+      const stocks = Number.parseInt(String(form.stocks ?? "").replace(/[^\d-]/g, ""), 10);
 
       if (!name) {
         throw new Error("Product name is required.");
@@ -228,7 +228,7 @@ export default function AdminPage() {
         throw new Error("Description is required.");
       }
       if (!Number.isFinite(stocks) || stocks < 0) {
-        throw new Error("Stocks must be a valid number (0 or higher).");
+        throw new Error("Stocks must be a valid amount (0 or higher).");
       }
 
       const productId = form.id || doc(collection(db, "products")).id;

@@ -83,19 +83,17 @@ export default function AdminProductForm({
           <input
             value={form.price}
             onChange={(event) => setForm((current) => ({ ...current, price: event.target.value }))}
-            type="number"
-            min="0"
-            step="0.01"
-            placeholder="Price"
+            type="text"
+            inputMode="text"
+            placeholder="Price (example: ₱1,799.00 or +1,799)"
             className="rounded-2xl border border-cloud-200 bg-white px-3.5 py-3 text-sm focus:border-cloud-500 focus:outline-none"
           />
           <input
             value={form.stocks}
             onChange={(event) => setForm((current) => ({ ...current, stocks: event.target.value }))}
-            type="number"
-            min="0"
-            step="1"
-            placeholder="Stocks"
+            type="text"
+            inputMode="numeric"
+            placeholder="Stocks (example: 1,000)"
             className="rounded-2xl border border-cloud-200 bg-white px-3.5 py-3 text-sm focus:border-cloud-500 focus:outline-none"
             required
           />

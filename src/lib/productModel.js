@@ -2,12 +2,26 @@ import { toSlug } from "./format";
 import { uniqueUrls } from "./media";
 
 function parsePrice(value) {
-  const parsed = Number.parseFloat(String(value ?? ""));
+  const raw = String(value ?? "").trim();
+  if (!raw) {
+    return null;
+  }
+
+  // Accept free-form symbol input and extract the first valid numeric token.
+  const tokenMatch = raw.match(/[+-]?\d[\d,]*(?:\.\d+)?/);
+  if (!tokenMatch) {
+    return null;
+  }
+
+  const normalized = tokenMatch[0].replace(/,/g, "");
+  const parsed = Number.parseFloat(normalized);
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
 }
 
 function parseStocks(value) {
-  const parsed = Number.parseInt(String(value ?? ""), 10);
+  const raw = String(value ?? "").trim();
+  const normalized = raw.replace(/[^\d-]/g, "");
+  const parsed = Number.parseInt(normalized, 10);
   return Number.isFinite(parsed) ? Math.max(0, parsed) : 0;
 }
 
