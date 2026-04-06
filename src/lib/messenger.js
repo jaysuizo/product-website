@@ -15,20 +15,47 @@ export function getMessengerLink(baseUrl) {
   }
 }
 
-export function getProductMessengerLink(product, baseUrl) {
-  const base = getMessengerLink(baseUrl);
+function getProductSlug(product) {
+  return String(product?.slug || product?.id || "").trim();
+}
+
+export function getProductPublicLink(product) {
+  const slug = getProductSlug(product);
+  if (!slug) {
+    return "";
+  }
+
+  if (typeof window === "undefined" || !window.location?.origin) {
+    return "";
+  }
+
+  return `${window.location.origin}/?product=${encodeURIComponent(slug)}`;
+}
+
+export function getProductInquiryText(product) {
   const productName = String(product?.name || "").trim();
-  if (!productName) {
-    return base;
+  const productLink = getProductPublicLink(product);
+
+  const lines = [];
+  if (productName) lines.push(`Product: ${productName}`);
+  if (productLink) lines.push(`Link: ${productLink}`);
+
+  return lines.join("\n").trim();
+}
+
+export function getProductMessengerLink(product, baseUrl) {
+  const messengerUrl = getMessengerLink(baseUrl);
+  const inquiryText = getProductInquiryText(product);
+
+  if (!inquiryText) {
+    return messengerUrl;
   }
 
   try {
-    const url = new URL(base);
-    const inquiryText = `Hi! I want to inquire about: ${productName}`;
-    url.searchParams.set("ref", `product-${productName.toLowerCase().replace(/\s+/g, "-")}`);
+    const url = new URL(messengerUrl);
     url.searchParams.set("text", inquiryText);
     return url.toString();
   } catch {
-    return base;
+    return messengerUrl;
   }
 }

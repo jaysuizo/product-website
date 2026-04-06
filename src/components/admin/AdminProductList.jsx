@@ -47,9 +47,6 @@ export default function AdminProductList({ products, onEdit, onDelete, busy }) {
                           </span>
                         ) : null}
                       </div>
-                      <p className="mt-1 text-xs text-slate-600 sm:text-sm">
-                        {product.description || "No description"}
-                      </p>
                       <p className="mt-2 text-xs font-semibold text-slate-500">
                         {product.category || "Uncategorized"} | {product.price ? formatCurrency(product.price) : "No price"} | {getProductStock(product)} stock |{" "}
                         {product.size || "Free Size"} |{" "}

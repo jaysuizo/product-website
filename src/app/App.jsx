@@ -11,7 +11,7 @@ export default function App() {
         <Route path="/" element={<HomePage />} />
         <Route path="/shop" element={<Navigate to="/" replace />} />
         <Route path="/product/:slug" element={<Navigate to="/" replace />} />
-        <Route path="/admin" element={<AdminPage />} />
+        <Route path="/admin/*" element={<AdminPage />} />
         <Route path="/home" element={<Navigate to="/" replace />} />
         <Route path="*" element={<NotFoundPage />} />
       </Routes>

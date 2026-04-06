@@ -103,3 +103,19 @@ export async function saveStoreSettings(payload) {
     { merge: true }
   );
 }
+
+export async function saveCustomerImageRecord(imageUrl) {
+  const image = String(imageUrl || "").trim();
+  if (!image) {
+    throw new Error("Customer image URL is required.");
+  }
+
+  await addDoc(collection(db, "customerImages"), {
+    image,
+    createdAt: serverTimestamp()
+  });
+}
+
+export async function deleteCustomerImageRecord(imageId) {
+  await deleteDoc(doc(db, "customerImages", imageId));
+}

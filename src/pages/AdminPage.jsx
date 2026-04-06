@@ -6,11 +6,14 @@ import AdminAuthPanel from "../components/admin/AdminAuthPanel";
 import AdminProductForm from "../components/admin/AdminProductForm";
 import AdminProductList from "../components/admin/AdminProductList";
 import AdminStoreSettings from "../components/admin/AdminStoreSettings";
+import AdminCustomerImages from "../components/admin/AdminCustomerImages";
 import { DEFAULT_STORE_SETTINGS, SITE_CONFIG } from "../config/site";
 import { useProducts } from "../contexts/ProductsContext";
 import {
   deleteProductRecord,
+  deleteCustomerImageRecord,
   isUserAdmin,
+  saveCustomerImageRecord,
   saveProductRecord,
   saveStoreSettings
 } from "../lib/adminApi";
@@ -43,7 +46,7 @@ function parseImageUrls(value) {
 
 export default function AdminPage() {
   const navigate = useNavigate();
-  const { liveProducts, categories, settings, warning, usingDemoData } = useProducts();
+  const { liveProducts, customerImages, categories, settings, warning, usingDemoData } = useProducts();
   const [authUser, setAuthUser] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [authBusy, setAuthBusy] = useState(false);
@@ -60,6 +63,9 @@ export default function AdminPage() {
   const [settingsForm, setSettingsForm] = useState(DEFAULT_STORE_SETTINGS);
   const [settingsMessage, setSettingsMessage] = useState("");
   const [settingsError, setSettingsError] = useState(false);
+  const [customerImagesDraft, setCustomerImagesDraft] = useState("");
+  const [customerImagesMessage, setCustomerImagesMessage] = useState("");
+  const [customerImagesError, setCustomerImagesError] = useState(false);
 
   useEffect(() => {
     setSettingsForm({
@@ -148,7 +154,6 @@ export default function AdminPage() {
       featured: Boolean(product.featured),
       price: product.price ?? "",
       stocks: String(product.stocks ?? ""),
-      description: product.description || "",
       size: product.size || "",
       imageUrlsText: Array.isArray(product.images) && product.images.length > 0
         ? product.images.join("\n")
@@ -214,8 +219,6 @@ export default function AdminPage() {
       const category = String(form.category || "").trim() || "General";
       const imageList = parseImageUrls(form.imageUrlsText);
       const image = imageList[0] || "";
-      const descriptionRaw = String(form.description || "");
-      const description = descriptionRaw.trim();
       const stocks = Number.parseInt(String(form.stocks ?? "").replace(/[^\d-]/g, ""), 10);
 
       if (!name) {
@@ -223,9 +226,6 @@ export default function AdminPage() {
       }
       if (imageList.length === 0) {
         throw new Error("Add at least one image URL.");
-      }
-      if (!description) {
-        throw new Error("Description is required.");
       }
       if (!Number.isFinite(stocks) || stocks < 0) {
         throw new Error("Stocks must be a valid amount (0 or higher).");
@@ -237,7 +237,6 @@ export default function AdminPage() {
           ...form,
           name,
           category,
-          description: descriptionRaw,
           stocks,
           images: imageList,
           imageUrlsText: imageList.join("\n"),
@@ -297,9 +296,67 @@ export default function AdminPage() {
     }
   }
 
+  async function handleSaveCustomerImages() {
+    if (!authUser || !isAdmin) {
+      return;
+    }
+
+    const urls = parseImageUrls(customerImagesDraft);
+    if (urls.length === 0) {
+      setCustomerImagesMessage("Add at least one customer image URL.");
+      setCustomerImagesError(true);
+      return;
+    }
+
+    setFormBusy(true);
+    setCustomerImagesMessage("Saving customer photos...");
+    setCustomerImagesError(false);
+
+    try {
+      await Promise.all(urls.map((url) => saveCustomerImageRecord(url)));
+      setCustomerImagesDraft("");
+      setCustomerImagesMessage(`Saved ${urls.length} customer photo${urls.length > 1 ? "s" : ""}.`);
+      setCustomerImagesError(false);
+    } catch (error) {
+      console.error("Save customer images failed:", error);
+      setCustomerImagesMessage(getFriendlyError(error));
+      setCustomerImagesError(true);
+    } finally {
+      setFormBusy(false);
+    }
+  }
+
+  async function handleDeleteCustomerImage(item) {
+    if (!authUser || !isAdmin) {
+      return;
+    }
+
+    const confirmed = window.confirm("Delete this customer photo?");
+    if (!confirmed) {
+      return;
+    }
+
+    setFormBusy(true);
+    setCustomerImagesMessage("Deleting customer photo...");
+    setCustomerImagesError(false);
+
+    try {
+      await deleteCustomerImageRecord(item.id);
+      setCustomerImagesMessage("Customer photo deleted.");
+      setCustomerImagesError(false);
+    } catch (error) {
+      console.error("Delete customer image failed:", error);
+      setCustomerImagesMessage(getFriendlyError(error));
+      setCustomerImagesError(true);
+    } finally {
+      setFormBusy(false);
+    }
+  }
+
   const tabItems = [
     { id: "form", label: "Product Form" },
     { id: "manage", label: "Manage Products" },
+    { id: "customers", label: "Customer Photos" },
     { id: "settings", label: "Store Settings" }
   ];
 
@@ -396,6 +453,19 @@ export default function AdminPage() {
 
               {activeTab === "manage" ? (
                 <AdminProductList products={adminProducts} onEdit={handleEditProduct} onDelete={handleDeleteProduct} busy={formBusy} />
+              ) : null}
+
+              {activeTab === "customers" ? (
+                <AdminCustomerImages
+                  customerImages={customerImages}
+                  draftUrls={customerImagesDraft}
+                  setDraftUrls={setCustomerImagesDraft}
+                  onSave={handleSaveCustomerImages}
+                  onDelete={handleDeleteCustomerImage}
+                  busy={formBusy}
+                  message={customerImagesMessage}
+                  messageIsError={customerImagesError}
+                />
               ) : null}
 
               {activeTab === "settings" ? (

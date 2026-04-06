@@ -1,4 +1,3 @@
-import { formatCurrency } from "../lib/format";
 import { getProductAvailability, getProductStock } from "../lib/productModel";
 import { SITE_CONFIG } from "../config/site";
 import { getProductMessengerLink } from "../lib/messenger";
@@ -66,34 +65,29 @@ export default function ProductCard({ product, onSelect, messengerUrl }) {
         </div>
       </div>
 
-      <div className="space-y-1.5 p-2 sm:space-y-2 sm:p-3">
+      <div className="space-y-1 p-1.5 sm:space-y-2 sm:p-3">
         <p className="line-clamp-1 text-[10px] font-bold uppercase tracking-[0.08em] text-slate-500">
           {product.category || "Uncategorized"}
         </p>
-        <h3 className="line-clamp-1 text-[13px] font-extrabold text-cloud-900 sm:text-base">{product.name}</h3>
+        <h3 className="line-clamp-1 text-[12px] font-extrabold text-cloud-900 sm:text-base">{product.name}</h3>
 
-        <div className="flex items-center justify-between gap-2">
-          {product.price ? (
-            <p className="text-[13px] font-extrabold text-cloud-700 sm:text-base">{formatCurrency(product.price)}</p>
-          ) : (
-            <p className="text-xs font-bold text-cloud-700 sm:text-sm">Message for price</p>
-          )}
-          {sizeText ? (
+        {sizeText ? (
+          <div className="flex justify-end">
             <span className="rounded-full border border-cloud-200 bg-white px-2 py-0.5 text-[10px] font-semibold text-cloud-700 sm:text-xs">
               {sizeText}
             </span>
-          ) : null}
-        </div>
+          </div>
+        ) : null}
         <div className="grid grid-cols-2 gap-1.5 sm:gap-2">
-          <span className="inline-flex min-h-10 items-center justify-center rounded-lg border border-cloud-200 bg-white px-2 py-2 text-[11px] font-bold text-cloud-700">
-            View Details
+          <span className="inline-flex min-h-9 items-center justify-center rounded-lg border border-cloud-200 bg-white px-2 py-2 text-[10px] font-bold text-cloud-700">
+            Tap for details
           </span>
           <a
             href={productMessengerUrl}
             target="_blank"
             rel="noreferrer"
             onClick={(event) => event.stopPropagation()}
-            className="inline-flex min-h-10 items-center justify-center rounded-lg bg-cloud-500 px-2 py-2 text-center text-[11px] font-bold text-white hover:bg-cloud-700 active:scale-[0.99]"
+            className="inline-flex min-h-9 items-center justify-center rounded-lg bg-cloud-500 px-2 py-2 text-center text-[10px] font-bold text-white hover:bg-cloud-700 active:scale-[0.99]"
           >
             Message Us
           </a>

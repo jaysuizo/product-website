@@ -15,8 +15,8 @@ export default function AdminProductForm({
     .filter(Boolean);
 
   return (
-    <section className="card-surface p-4 sm:p-6">
-      <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+    <section className="card-surface p-3 sm:p-6">
+      <div className="mb-3 flex flex-wrap items-end justify-between gap-2.5 sm:mb-4 sm:gap-3">
         <div>
           <h2 className="sky-title text-xl sm:text-3xl">{isEditing ? "Edit Product" : "Add Product"}</h2>
           <p className="mt-1 text-xs text-slate-600 sm:text-sm">Simple inventory form for single-store products.</p>
@@ -37,14 +37,14 @@ export default function AdminProductForm({
           event.preventDefault();
           onSubmit();
         }}
-        className="grid gap-3"
+        className="grid gap-2.5 sm:gap-3"
       >
         <input
           value={form.name}
           onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))}
           type="text"
           placeholder="Product Name"
-          className="rounded-2xl border border-cloud-200 bg-white px-3.5 py-3 text-sm focus:border-cloud-500 focus:outline-none"
+          className="rounded-2xl border border-cloud-200 bg-white px-3 py-2.5 text-sm focus:border-cloud-500 focus:outline-none"
           required
         />
 
@@ -59,7 +59,7 @@ export default function AdminProductForm({
             type="text"
             placeholder="Category (example: Gadgets)"
             list="category-options"
-            className="rounded-2xl border border-cloud-200 bg-white px-3.5 py-3 text-sm focus:border-cloud-500 focus:outline-none"
+            className="rounded-2xl border border-cloud-200 bg-white px-3 py-2.5 text-sm focus:border-cloud-500 focus:outline-none"
             required
           />
           <datalist id="category-options">
@@ -79,14 +79,14 @@ export default function AdminProductForm({
           Mark as featured product
         </label>
 
-        <div className="grid gap-3 md:grid-cols-2">
+        <div className="grid gap-2.5 md:grid-cols-2 sm:gap-3">
           <input
             value={form.price}
             onChange={(event) => setForm((current) => ({ ...current, price: event.target.value }))}
             type="text"
             inputMode="text"
             placeholder="Price (example: ₱1,799.00 or +1,799)"
-            className="rounded-2xl border border-cloud-200 bg-white px-3.5 py-3 text-sm focus:border-cloud-500 focus:outline-none"
+            className="rounded-2xl border border-cloud-200 bg-white px-3 py-2.5 text-sm focus:border-cloud-500 focus:outline-none"
           />
           <input
             value={form.stocks}
@@ -94,7 +94,7 @@ export default function AdminProductForm({
             type="text"
             inputMode="numeric"
             placeholder="Stocks (example: 1,000)"
-            className="rounded-2xl border border-cloud-200 bg-white px-3.5 py-3 text-sm focus:border-cloud-500 focus:outline-none"
+            className="rounded-2xl border border-cloud-200 bg-white px-3 py-2.5 text-sm focus:border-cloud-500 focus:outline-none"
             required
           />
         </div>
@@ -104,16 +104,7 @@ export default function AdminProductForm({
           onChange={(event) => setForm((current) => ({ ...current, size: event.target.value }))}
           type="text"
           placeholder="Size (example: Free Size or S, M, L)"
-          className="rounded-2xl border border-cloud-200 bg-white px-3.5 py-3 text-sm focus:border-cloud-500 focus:outline-none"
-        />
-
-        <textarea
-          value={form.description}
-          onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))}
-          rows={3}
-          placeholder="Description"
-          className="rounded-2xl border border-cloud-200 bg-white px-3.5 py-3 text-sm focus:border-cloud-500 focus:outline-none"
-          required
+          className="rounded-2xl border border-cloud-200 bg-white px-3 py-2.5 text-sm focus:border-cloud-500 focus:outline-none"
         />
 
         <textarea
@@ -121,7 +112,7 @@ export default function AdminProductForm({
           onChange={(event) => setForm((current) => ({ ...current, imageUrlsText: event.target.value }))}
           rows={4}
           placeholder={"Image URLs (one per line, no max)\nhttps://...\nhttps://..."}
-          className="rounded-2xl border border-cloud-200 bg-white px-3.5 py-3 text-sm focus:border-cloud-500 focus:outline-none"
+          className="rounded-2xl border border-cloud-200 bg-white px-3 py-2.5 text-sm focus:border-cloud-500 focus:outline-none"
           required
         />
 
@@ -130,7 +121,7 @@ export default function AdminProductForm({
           onChange={(event) => setForm((current) => ({ ...current, video: event.target.value }))}
           type="url"
           placeholder="Video URL (optional)"
-          className="rounded-2xl border border-cloud-200 bg-white px-3.5 py-3 text-sm focus:border-cloud-500 focus:outline-none"
+          className="rounded-2xl border border-cloud-200 bg-white px-3 py-2.5 text-sm focus:border-cloud-500 focus:outline-none"
         />
 
         {imageUrlList.length > 0 ? (

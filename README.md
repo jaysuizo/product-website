@@ -14,10 +14,10 @@ Clean single-store homepage built with React + Vite + Tailwind + Firebase.
   - price
   - size
   - stocks
-  - description
   - optional video
   - Messenger CTA
 - Admin page for inventory CRUD at `/admin`
+- Admin customer photo manager (URL-only) and homepage customer gallery
 
 ## Simple Product Schema
 
@@ -29,13 +29,17 @@ Clean single-store homepage built with React + Vite + Tailwind + Firebase.
 - `featured` (boolean, required)
 - `price` (number|null)
 - `stocks` (number, required)
-- `description` (string, required)
 - `size` (string or string[])
 - `images` (string[], required, no max limit)
 - `image` (string, required)
 - `video` (string|null)
 - `createdAt` (timestamp)
 - `updatedAt` (timestamp)
+
+`customerImages/{imageId}`:
+
+- `image` (string URL, required)
+- `createdAt` (timestamp, required)
 
 ## Local Run
 
@@ -80,3 +84,4 @@ VITE_MESSENGER_URL=https://m.me/YOUR_USERNAME
 - Admin is manual-only: create `admins/{uid}` in Firebase Console for approved accounts.
 - Spark mode enabled: admin uses image/video URL inputs (no Firebase Storage upload required).
 - Store logo uses URL input in admin settings.
+- Customer photos are URL-only (no storage upload), unlimited entries.

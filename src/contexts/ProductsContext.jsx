@@ -33,6 +33,7 @@ function normalizeSettings(raw = {}) {
 export function ProductsProvider({ children }) {
   const [products, setProducts] = useState([]);
   const [liveProducts, setLiveProducts] = useState([]);
+  const [customerImages, setCustomerImages] = useState([]);
   const [categories, setCategories] = useState(DEFAULT_CATEGORIES);
   const [settings, setSettings] = useState(DEFAULT_STORE_SETTINGS);
   const [loading, setLoading] = useState(true);
@@ -49,16 +50,18 @@ export function ProductsProvider({ children }) {
     }
 
     let loadedProducts = false;
+    let loadedCustomerImages = false;
     let loadedCategories = false;
     let loadedSettings = false;
 
     const finishLoading = () => {
-      if (loadedProducts && loadedCategories && loadedSettings) {
+      if (loadedProducts && loadedCustomerImages && loadedCategories && loadedSettings) {
         setLoading(false);
       }
     };
 
     const productsQuery = query(collection(db, "products"), orderBy("updatedAt", "desc"));
+    const customerImagesQuery = query(collection(db, "customerImages"), orderBy("createdAt", "desc"));
     const categoriesQuery = query(collection(db, "categories"), orderBy("name", "asc"));
 
     const unsubscribeProducts = onSnapshot(
@@ -77,6 +80,24 @@ export function ProductsProvider({ children }) {
         setProducts(DEMO_PRODUCTS_RAW.map((item) => normalizeProduct(item.id, item)));
         setWarning(snapshotError.message || "Unable to load live products. Showing demo catalog.");
         loadedProducts = true;
+        finishLoading();
+      }
+    );
+
+    const unsubscribeCustomerImages = onSnapshot(
+      customerImagesQuery,
+      (snapshot) => {
+        const docs = snapshot.docs
+          .map((docItem) => ({ id: docItem.id, ...docItem.data() }))
+          .filter((item) => String(item.image || "").trim())
+          .map((item) => ({ ...item, image: String(item.image || "").trim() }));
+        setCustomerImages(docs);
+        loadedCustomerImages = true;
+        finishLoading();
+      },
+      () => {
+        setCustomerImages([]);
+        loadedCustomerImages = true;
         finishLoading();
       }
     );
@@ -112,6 +133,7 @@ export function ProductsProvider({ children }) {
 
     return () => {
       unsubscribeProducts();
+      unsubscribeCustomerImages();
       unsubscribeCategories();
       unsubscribeSettings();
     };
@@ -121,6 +143,7 @@ export function ProductsProvider({ children }) {
     () => ({
       products,
       liveProducts,
+      customerImages,
       categories,
       settings,
       loading,
@@ -128,7 +151,7 @@ export function ProductsProvider({ children }) {
       warning,
       usingDemoData: liveProducts.length === 0 && products.length > 0
     }),
-    [products, liveProducts, categories, settings, loading, error, warning]
+    [products, liveProducts, customerImages, categories, settings, loading, error, warning]
   );
 
   return <ProductsContext.Provider value={value}>{children}</ProductsContext.Provider>;

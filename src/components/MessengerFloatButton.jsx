@@ -9,7 +9,7 @@ export default function MessengerFloatButton({ href }) {
       href={messengerUrl}
       target="_blank"
       rel="noreferrer"
-      className="fixed bottom-[max(0.75rem,env(safe-area-inset-bottom)+0.5rem)] right-3 z-50 inline-flex items-center gap-1.5 rounded-full border border-white/80 bg-gradient-to-br from-cloud-500 to-blue-600 px-3 py-2 text-xs font-bold text-white shadow-float transition hover:-translate-y-0.5 hover:from-cloud-700 hover:to-cloud-700 active:scale-[0.98] sm:bottom-5 sm:right-5 sm:gap-2 sm:px-4 sm:py-3 sm:text-sm"
+      className="fixed bottom-[max(0.65rem,env(safe-area-inset-bottom)+0.4rem)] right-2.5 z-50 inline-flex items-center gap-1.5 rounded-full border border-white/80 bg-gradient-to-br from-cloud-500 to-blue-600 px-2.5 py-2 text-xs font-bold text-white shadow-float transition hover:-translate-y-0.5 hover:from-cloud-700 hover:to-cloud-700 active:scale-[0.98] sm:bottom-5 sm:right-5 sm:gap-2 sm:px-4 sm:py-3 sm:text-sm"
       aria-label="Contact on Messenger"
       title="Message on Messenger"
     >
