@@ -35,10 +35,13 @@ export function getProductPublicLink(product) {
 export function getProductInquiryText(product) {
   const productName = String(product?.name || "").trim();
   const productLink = getProductPublicLink(product);
+  const productImage = String(product?.image || "").trim();
 
   const lines = [];
   if (productName) lines.push(`Product: ${productName}`);
   if (productLink) lines.push(`Link: ${productLink}`);
+  // Keep plain image URL on its own line so Messenger can render preview where supported.
+  if (productImage) lines.push(productImage);
 
   return lines.join("\n").trim();
 }

@@ -3,11 +3,12 @@ import { getProductStock } from "../lib/productModel";
 import ProductInquiryButton from "./ProductInquiryButton";
 import ProductVideo from "./ProductVideo";
 import { SITE_CONFIG } from "../config/site";
-import { getProductMessengerLink } from "../lib/messenger";
+import { getProductInquiryText, getProductMessengerLink } from "../lib/messenger";
 
 export default function ProductDetailModal({ product, messengerUrl, onClose }) {
   const [activeImage, setActiveImage] = useState("");
   const [selectedSize, setSelectedSize] = useState("");
+  const [inquiryHint, setInquiryHint] = useState("");
 
   const parseSizes = (value) => {
     if (Array.isArray(value)) {
@@ -28,6 +29,7 @@ export default function ProductDetailModal({ product, messengerUrl, onClose }) {
     setActiveImage(product.image || "");
     const sizes = parseSizes(product.size);
     setSelectedSize(sizes[0] || "Free Size");
+    setInquiryHint("");
   }, [product]);
 
   useEffect(() => {
@@ -60,7 +62,27 @@ export default function ProductDetailModal({ product, messengerUrl, onClose }) {
   const stocks = getProductStock(product);
   const sizeOptions = parseSizes(product.size);
   const sizeText = sizeOptions.length > 0 ? sizeOptions.join(", ") : "Free Size";
-  const productMessengerUrl = getProductMessengerLink(product, messengerUrl || SITE_CONFIG.messengerUrl);
+  const inquiryProduct = {
+    ...product,
+    image: activeImage || product.image
+  };
+  const productMessengerUrl = getProductMessengerLink(inquiryProduct, messengerUrl || SITE_CONFIG.messengerUrl);
+  const inquiryText = getProductInquiryText(inquiryProduct);
+
+  const handleInquiryClick = async (event) => {
+    event.preventDefault();
+
+    if (inquiryText) {
+      try {
+        await navigator.clipboard.writeText(inquiryText);
+        setInquiryHint("Copied product details. Paste in Messenger chat.");
+      } catch {
+        setInquiryHint("Open chat and send the product manually.");
+      }
+    }
+
+    window.open(productMessengerUrl, "_blank", "noopener,noreferrer");
+  };
 
   return (
     <div className="fixed inset-0 z-[70] flex items-end justify-center bg-slate-950/55 p-0 sm:items-center sm:p-6" onClick={onClose}>
@@ -144,10 +166,17 @@ export default function ProductDetailModal({ product, messengerUrl, onClose }) {
               <p className="mb-2 px-1 text-xs font-semibold text-slate-600">
                 Product: <span className="font-bold text-cloud-700">{product.name}</span>
               </p>
+              <p className="mb-2 px-1 text-[11px] font-semibold text-slate-500">
+                Product link and image are prepared automatically.
+              </p>
               <ProductInquiryButton
                 href={productMessengerUrl}
                 label="Message about this product"
+                onClick={handleInquiryClick}
               />
+              {inquiryHint ? (
+                <p className="mt-2 px-1 text-[11px] font-semibold text-cloud-700">{inquiryHint}</p>
+              ) : null}
             </div>
 
             {product.video ? (
